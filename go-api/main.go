@@ -1,36 +1,44 @@
 package main
 
 import (
-	"database/sql"
+	"flag"
 	"fmt"
-	"log"
-	"os"
+	"net/http"
+	"time"
+
+	// "os"
+	"github.com/jackwillis517/Scribo/internal/app"
+	"github.com/jackwillis517/Scribo/internal/routes"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load("../.env")
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// Parse optional server port argument default is 8081
+	var port int
+	flag.IntVar(&port, "port", 8081, "go api backend server port")
+	flag.Parse()
 
-	databaseUrl := os.Getenv("DATABASE_URL")
-	db, err := Open(databaseUrl)
+	app, err := app.NewApplication()
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
-}
+	defer app.DB.Close()
 
-func Open(url string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", url)
-	if err != nil {
-		return nil, fmt.Errorf("db: open %w", err)
+	r := routes.SetupRoutes(app)
+
+	server := &http.Server{
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      r,
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
 	}
 
-	fmt.Println("Connected to Database...")
+	app.Logger.Printf("we are running on port %d\n", port)
 
-	return db, nil
+	err = server.ListenAndServe()
+	if err != nil {
+		app.Logger.Fatal(err)
+	}
 }
