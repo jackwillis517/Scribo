@@ -9,7 +9,18 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Get("/health", app.HealthCheck)
-
 	r.Post("/login", app.UserHandler.HandleUserLogin)
+
+	// app.Middleware.Authenticate() is used to protect routes that require authentication
+	// Need document, sections, and notes stores and handlers
+
+	// /documents/createDocument
+	// /documents/readDocument
+	// /documents/updateDocument
+	// /documents/deleteDocument
+
+	// /sections/...
+
+	// /notes/...
 	return r
 }

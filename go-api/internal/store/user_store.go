@@ -21,6 +21,7 @@ func NewPostgresUserStore(db *sql.DB) *PostgresUserStore {
 type UserStore interface {
 	CreateUser(*User) (*User, error)
 	FindUserByGoogleID(*User) (*User, error)
+	GetUserByID(string) (*User, error)
 }
 
 func (p *PostgresUserStore) CreateUser(user *User) (*User, error) {
@@ -36,6 +37,18 @@ func (p *PostgresUserStore) CreateUser(user *User) (*User, error) {
 func (p *PostgresUserStore) FindUserByGoogleID(user *User) (*User, error) {
 	row := p.db.QueryRow(`SELECT id, google_id, email, name FROM users WHERE google_id = $1`, user.GoogleID)
 	err := row.Scan(&user.ID, &user.GoogleID, &user.Email, &user.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (p *PostgresUserStore) GetUserByID(id string) (*User, error) {
+	user := &User{}
+	row := p.db.QueryRow(`SELECT id, google_id, email, name, picture FROM users WHERE id = $1`, id)
+	err := row.Scan(&user.ID, &user.GoogleID, &user.Email, &user.Name, &user.Picture)
+
 	if err != nil {
 		return nil, err
 	}

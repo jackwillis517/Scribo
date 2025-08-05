@@ -82,7 +82,7 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If no user found then register new user
+	// If user not found
 	if err == sql.ErrNoRows {
 		newUser, err := u.userStore.CreateUser(&user)
 		if err != nil {
@@ -90,7 +90,7 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "bad user data"})
 			return
 		}
-		// Return jwt token using found user id
+		// Return jwt token using new user id
 		tokenString, err := generateJWT(newUser.ID)
 		if err != nil {
 			u.logger.Printf("ERROR: generateJWT: %v", err)
@@ -100,6 +100,7 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 
 		utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"token": tokenString})
 		return
+		// If user found
 	}
 
 	// Return jwt token using found user id

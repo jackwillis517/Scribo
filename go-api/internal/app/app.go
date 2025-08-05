@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/jackwillis517/Scribo/internal/api"
+	"github.com/jackwillis517/Scribo/internal/middleware"
 	"github.com/jackwillis517/Scribo/internal/store"
 	"github.com/joho/godotenv"
 )
@@ -16,6 +17,7 @@ type Application struct {
 	Logger      *log.Logger
 	DB          *sql.DB
 	UserHandler *api.UserHandler
+	Middleware  middleware.UserMiddleware
 }
 
 func NewApplication() (*Application, error) {
@@ -37,11 +39,13 @@ func NewApplication() (*Application, error) {
 	userStore := store.NewPostgresUserStore(db)
 
 	userHandler := api.NewUserHandler(userStore, logger)
+	middlewareHandler := middleware.UserMiddleware{UserStore: userStore}
 
 	app := &Application{
 		Logger:      logger,
 		DB:          db,
 		UserHandler: userHandler,
+		Middleware:  middlewareHandler,
 	}
 
 	return app, nil
