@@ -8,19 +8,22 @@ import (
 func SetupRoutes(app *app.Application) *chi.Mux {
 	r := chi.NewRouter()
 
+	r.Group(func(r chi.Router) {
+		r.Use(app.Middleware.Authenticate)
+
+		r.Post("/documents/createDocment", app.DocumentHandler.HandleCreateDocument)
+
+		// /documents/createDocument
+		// /documents/readDocument
+		// /documents/updateDocument
+		// /documents/deleteDocument
+
+		// /sections/...
+
+		// /notes/...
+	})
+
 	r.Get("/health", app.HealthCheck)
 	r.Post("/login", app.UserHandler.HandleUserLogin)
-
-	// app.Middleware.Authenticate() is used to protect routes that require authentication
-	// Need document, sections, and notes stores and handlers
-
-	// /documents/createDocument
-	// /documents/readDocument
-	// /documents/updateDocument
-	// /documents/deleteDocument
-
-	// /sections/...
-
-	// /notes/...
 	return r
 }

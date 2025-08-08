@@ -14,10 +14,11 @@ import (
 )
 
 type Application struct {
-	Logger      *log.Logger
-	DB          *sql.DB
-	UserHandler *api.UserHandler
-	Middleware  middleware.UserMiddleware
+	Logger          *log.Logger
+	DB              *sql.DB
+	UserHandler     *api.UserHandler
+	DocumentHandler *api.DocumentHandler
+	Middleware      middleware.UserMiddleware
 }
 
 func NewApplication() (*Application, error) {
@@ -37,15 +38,18 @@ func NewApplication() (*Application, error) {
 	}
 
 	userStore := store.NewPostgresUserStore(db)
+	documentStore := store.NewPostgresDocumentStore(db)
 
 	userHandler := api.NewUserHandler(userStore, logger)
+	documentHandler := api.NewDocumentHandler(documentStore, logger)
 	middlewareHandler := middleware.UserMiddleware{UserStore: userStore}
 
 	app := &Application{
-		Logger:      logger,
-		DB:          db,
-		UserHandler: userHandler,
-		Middleware:  middlewareHandler,
+		Logger:          logger,
+		DB:              db,
+		UserHandler:     userHandler,
+		DocumentHandler: documentHandler,
+		Middleware:      middlewareHandler,
 	}
 
 	return app, nil

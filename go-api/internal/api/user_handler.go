@@ -95,10 +95,19 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			u.logger.Printf("ERROR: generateJWT: %v", err)
 			utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to create JWT token"})
+
 			return
 		}
 
-		utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"token": tokenString})
+		http.SetCookie(w, &http.Cookie{
+			Name:     "auth_token",
+			Value:    tokenString,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(72 * time.Hour),
+		})
 		return
 		// If user found
 	}
@@ -111,6 +120,14 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"token": tokenString})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(72 * time.Hour),
+	})
 	fmt.Printf("User Created! Google Id Token: %v JWT Token: %v\n", req.IDToken, tokenString)
 }
