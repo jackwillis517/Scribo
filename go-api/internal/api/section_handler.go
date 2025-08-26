@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -11,27 +10,27 @@ import (
 	"github.com/jackwillis517/Scribo/internal/utils"
 )
 
-type DocumentHandler struct {
-	documentStore store.DocumentStore
-	logger        *log.Logger
+type SectionHandler struct {
+	sectionStore store.SectionStore
+	logger       *log.Logger
 }
 
-type DocumentId struct {
-	DocumentId string `json:"document_id"`
+type SectionId struct {
+	SectionId string `json:"section_id"`
 }
 
-func NewDocumentHandler(documentStore store.DocumentStore, logger *log.Logger) *DocumentHandler {
-	return &DocumentHandler{
-		documentStore: documentStore,
-		logger:        logger,
+func NewSectionHandler(sectionStore store.SectionStore, logger *log.Logger) *SectionHandler {
+	return &SectionHandler{
+		sectionStore: sectionStore,
+		logger:       logger,
 	}
 }
 
-func (dh *DocumentHandler) HandleCreateDocument(w http.ResponseWriter, r *http.Request) {
-	var document store.Document
-	err := json.NewDecoder(r.Body).Decode(&document)
+func (sh *SectionHandler) HandleCreateSection(w http.ResponseWriter, r *http.Request) {
+	var section store.Section
+	err := json.NewDecoder(r.Body).Decode(&section)
 	if err != nil {
-		dh.logger.Printf("ERROR: decodingCreateDocument: %v", err)
+		sh.logger.Printf("ERROR: decodingCreateSection: %v", err)
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "internal request error"})
 		return
 	}
@@ -42,23 +41,21 @@ func (dh *DocumentHandler) HandleCreateDocument(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	document.UserID = currentUser.ID
-
-	createdDocument, err := dh.documentStore.CreateDocument(&document, currentUser)
+	createdSection, err := sh.sectionStore.CreateSection(&section)
 	if err != nil {
-		dh.logger.Printf("ERROR: createWorkout: %v", err)
+		sh.logger.Printf("ERROR: createSection: %v", err)
 		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to create document"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"document": createdDocument})
+	utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"section": createdSection})
 }
 
-func (dh *DocumentHandler) HandleReadDocument(w http.ResponseWriter, r *http.Request) {
-	var documentId DocumentId
-	err := json.NewDecoder(r.Body).Decode(&documentId)
+func (sh *SectionHandler) HandleReadSection(w http.ResponseWriter, r *http.Request) {
+	var sectionId SectionId
+	err := json.NewDecoder(r.Body).Decode(&sectionId)
 	if err != nil {
-		dh.logger.Printf("ERROR: decodingReadDocument: %v", err)
+		sh.logger.Printf("ERROR: decodingReadSection: %v", err)
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "internal request error"})
 		return
 	}
@@ -69,22 +66,21 @@ func (dh *DocumentHandler) HandleReadDocument(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	fmt.Println(documentId)
-	document, err := dh.documentStore.ReadDocument(documentId.DocumentId)
+	section, err := sh.sectionStore.ReadSection(sectionId.SectionId)
 	if err != nil {
-		dh.logger.Printf("ERROR: readDocument: %v", err)
+		sh.logger.Printf("ERROR: readDocument: %v", err)
 		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to read document"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"document": document})
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"document": section})
 }
 
-func (dh *DocumentHandler) HandleUpdateDocument(w http.ResponseWriter, r *http.Request) {
-	var document store.Document
-	err := json.NewDecoder(r.Body).Decode(&document)
+func (sh *SectionHandler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
+	var section store.Section
+	err := json.NewDecoder(r.Body).Decode(&section)
 	if err != nil {
-		dh.logger.Printf("ERROR: decodingUpdateDocument: %v", err)
+		sh.logger.Printf("ERROR: decodingUpdateSection: %v", err)
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "internal request error"})
 		return
 	}
@@ -95,21 +91,21 @@ func (dh *DocumentHandler) HandleUpdateDocument(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	updatedDocument, err := dh.documentStore.UpdateDocument(&document)
+	updatedSection, err := sh.sectionStore.UpdateSection(&section)
 	if err != nil {
-		dh.logger.Printf("ERROR: updateDocument: %v", err)
+		sh.logger.Printf("ERROR: updateSection: %v", err)
 		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to update document"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"document": updatedDocument})
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"section": updatedSection})
 }
 
-func (dh *DocumentHandler) HandleDeleteDocument(w http.ResponseWriter, r *http.Request) {
-	documentID, err := utils.ReadStringParam(r)
+func (sh *SectionHandler) HandleDeleteSection(w http.ResponseWriter, r *http.Request) {
+	sectionID, err := utils.ReadStringParam(r)
 
 	if err != nil {
-		dh.logger.Printf("ERROR: readDocumentIDParam: %v", err)
+		sh.logger.Printf("ERROR: readStringParam: %v", err)
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "internal request error"})
 		return
 	}
@@ -120,9 +116,9 @@ func (dh *DocumentHandler) HandleDeleteDocument(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = dh.documentStore.DeleteDocument(documentID)
+	err = sh.sectionStore.DeleteSection(sectionID)
 	if err != nil {
-		dh.logger.Printf("ERROR: deleteDocument: %v", err)
+		sh.logger.Printf("ERROR: deleteSection: %v", err)
 		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to delete document"})
 		return
 	}
@@ -130,7 +126,7 @@ func (dh *DocumentHandler) HandleDeleteDocument(w http.ResponseWriter, r *http.R
 	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"result": "document deleted"})
 }
 
-func (dh *DocumentHandler) HandleGetAllDocuments(w http.ResponseWriter, r *http.Request) {
+func (dh *DocumentHandler) HandleGetAllSections(w http.ResponseWriter, r *http.Request) {
 	currentUser := middleware.GetUser(r)
 	if currentUser == nil {
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "you must be logged in"})

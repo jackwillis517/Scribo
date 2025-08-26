@@ -34,11 +34,14 @@ func GetUser(r *http.Request) *store.User {
 
 func parseJWTToken(jwtToken string) (*jwt.Token, error) {
 	token, err := jwt.Parse(jwtToken, func(t *jwt.Token) (interface{}, error) {
+
 		secretKey := os.Getenv("JWT_SECRET")
+
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return secretKey, nil
+
+		return []byte(secretKey), nil
 	})
 
 	return token, err
@@ -48,6 +51,7 @@ func (um *UserMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the JWT token from the auth_token cookie
 		cookie, err := r.Cookie("auth_token")
+		fmt.Println(cookie)
 		if err != nil {
 			if err == http.ErrNoCookie {
 				utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "unauthorized: missing auth token"})
@@ -62,6 +66,7 @@ func (um *UserMiddleware) Authenticate(next http.Handler) http.Handler {
 		token, err := parseJWTToken(jwtToken)
 
 		if err != nil || !token.Valid {
+			fmt.Println(err)
 			utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "unauthorized: invalid auth token"})
 			return
 		}

@@ -11,7 +11,11 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 	r.Group(func(r chi.Router) {
 		r.Use(app.Middleware.Authenticate)
 
-		r.Post("/documents/createDocment", app.DocumentHandler.HandleCreateDocument)
+		r.Post("/documents/createDocument", app.DocumentHandler.HandleCreateDocument)
+		r.Get("/documents/readDocument", app.DocumentHandler.HandleReadDocument)
+		r.Put("/documents/updateDocument", app.DocumentHandler.HandleUpdateDocument)
+		r.Delete("/documents/deleteDocument/{id}", app.DocumentHandler.HandleDeleteDocument)
+		r.Get("/documents/getAllDocuments", app.DocumentHandler.HandleGetAllDocuments)
 
 		// /documents/createDocument
 		// /documents/readDocument
