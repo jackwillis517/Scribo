@@ -11,7 +11,7 @@ type Section struct {
 	DocumentID string          `json:"document_id"`
 	Title      string          `json:"title"`
 	Content    string          `json:"content"`
-	Summary    int             `json:"summary"`
+	Summary    string          `json:"summary"`
 	Metadata   json.RawMessage `json:"metadata"`
 	Length     int             `json:"length"`
 	NumWords   int             `json:"num_words"`
@@ -38,7 +38,7 @@ type SectionStore interface {
 func (p *PostgresSectionStore) CreateSection(section *Section) (*Section, error) {
 	query := `
 	INSERT INTO sections (document_id, title, content, summary, metadata, length, num_words)
-	VALUES ($1, $2, $3, $4, $5)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
 	RETURNING id, created_at, updated_at
 	`
 

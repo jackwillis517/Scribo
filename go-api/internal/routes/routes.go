@@ -17,6 +17,12 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 		r.Delete("/documents/deleteDocument/{id}", app.DocumentHandler.HandleDeleteDocument)
 		r.Get("/documents/getAllDocuments", app.DocumentHandler.HandleGetAllDocuments)
 
+		r.Post("/sections/createSection", app.SectionHandler.HandleCreateSection)
+		r.Get("/sections/readSection", app.SectionHandler.HandleReadSection)
+		r.Put("/sections/updateSection", app.SectionHandler.HandleUpdateSection)
+		r.Delete("/sections/deleteSection/{id}", app.SectionHandler.HandleDeleteSection)
+		r.Get("/sections/getAllSections", app.SectionHandler.HandleGetAllSections)
+
 		// /documents/createDocument
 		// /documents/readDocument
 		// /documents/updateDocument

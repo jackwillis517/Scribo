@@ -17,7 +17,7 @@ type DocumentHandler struct {
 }
 
 type DocumentId struct {
-	DocumentId string `json:"document_id"`
+	DocumentId string `json:"id"`
 }
 
 func NewDocumentHandler(documentStore store.DocumentStore, logger *log.Logger) *DocumentHandler {

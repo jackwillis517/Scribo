@@ -18,6 +18,8 @@ type Application struct {
 	DB              *sql.DB
 	UserHandler     *api.UserHandler
 	DocumentHandler *api.DocumentHandler
+	SectionHandler  *api.SectionHandler
+	NoteHandler     *api.NoteHandler
 	Middleware      middleware.UserMiddleware
 }
 
@@ -39,9 +41,13 @@ func NewApplication() (*Application, error) {
 
 	userStore := store.NewPostgresUserStore(db)
 	documentStore := store.NewPostgresDocumentStore(db)
+	sectionStore := store.NewPostgresSectionStore(db)
+	noteStore := store.NewPostgresNoteStore(db)
 
 	userHandler := api.NewUserHandler(userStore, logger)
 	documentHandler := api.NewDocumentHandler(documentStore, logger)
+	sectionHandler := api.NewSectionHandler(sectionStore, logger)
+	noteHandler := api.NewNoteHandler(noteStore, logger)
 	middlewareHandler := middleware.UserMiddleware{UserStore: userStore}
 
 	app := &Application{
@@ -49,6 +55,8 @@ func NewApplication() (*Application, error) {
 		DB:              db,
 		UserHandler:     userHandler,
 		DocumentHandler: documentHandler,
+		SectionHandler:  sectionHandler,
+		NoteHandler:     noteHandler,
 		Middleware:      middlewareHandler,
 	}
 

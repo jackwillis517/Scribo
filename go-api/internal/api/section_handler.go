@@ -16,7 +16,7 @@ type SectionHandler struct {
 }
 
 type SectionId struct {
-	SectionId string `json:"section_id"`
+	SectionId string `json:"id"`
 }
 
 func NewSectionHandler(sectionStore store.SectionStore, logger *log.Logger) *SectionHandler {
@@ -44,7 +44,7 @@ func (sh *SectionHandler) HandleCreateSection(w http.ResponseWriter, r *http.Req
 	createdSection, err := sh.sectionStore.CreateSection(&section)
 	if err != nil {
 		sh.logger.Printf("ERROR: createSection: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to create document"})
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to create section"})
 		return
 	}
 
@@ -69,11 +69,11 @@ func (sh *SectionHandler) HandleReadSection(w http.ResponseWriter, r *http.Reque
 	section, err := sh.sectionStore.ReadSection(sectionId.SectionId)
 	if err != nil {
 		sh.logger.Printf("ERROR: readDocument: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to read document"})
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to read section"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"document": section})
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"section": section})
 }
 
 func (sh *SectionHandler) HandleUpdateSection(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,7 @@ func (sh *SectionHandler) HandleUpdateSection(w http.ResponseWriter, r *http.Req
 	updatedSection, err := sh.sectionStore.UpdateSection(&section)
 	if err != nil {
 		sh.logger.Printf("ERROR: updateSection: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to update document"})
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to update section"})
 		return
 	}
 
@@ -119,26 +119,26 @@ func (sh *SectionHandler) HandleDeleteSection(w http.ResponseWriter, r *http.Req
 	err = sh.sectionStore.DeleteSection(sectionID)
 	if err != nil {
 		sh.logger.Printf("ERROR: deleteSection: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to delete document"})
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to delete section"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"result": "document deleted"})
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"result": "section deleted"})
 }
 
-func (dh *DocumentHandler) HandleGetAllSections(w http.ResponseWriter, r *http.Request) {
+func (sh *SectionHandler) HandleGetAllSections(w http.ResponseWriter, r *http.Request) {
 	currentUser := middleware.GetUser(r)
 	if currentUser == nil {
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "you must be logged in"})
 		return
 	}
 
-	documents, err := dh.documentStore.GetAllDocuments(currentUser)
+	sections, err := sh.sectionStore.GetAllSections(currentUser)
 	if err != nil {
-		dh.logger.Printf("ERROR: getAllDocuments: %v", err)
-		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to get documents"})
+		sh.logger.Printf("ERROR: getAllSections: %v", err)
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to get all sections"})
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"documents": documents})
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"sections": sections})
 }

@@ -51,7 +51,6 @@ func (um *UserMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the JWT token from the auth_token cookie
 		cookie, err := r.Cookie("auth_token")
-		fmt.Println(cookie)
 		if err != nil {
 			if err == http.ErrNoCookie {
 				utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "unauthorized: missing auth token"})
