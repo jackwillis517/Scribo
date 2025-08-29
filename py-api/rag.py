@@ -1,12 +1,13 @@
+from raptor import raptor 
 from dotenv import load_dotenv
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.vectorstores import Chroma
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.load import dumps, loads
+from langchain_community.vectorstores import Chroma, Weaviate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 
 load_dotenv()
 
@@ -16,8 +17,24 @@ docs = loader.load()
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 splits = text_splitter.split_documents(docs)
 
-vectorstore = Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings())
 
+# RAPTOR 
+leaf_texts = splits
+raptor_results = raptor(leaf_texts, level=1, n_levels=3)
+
+# Initialize all_texts with leaf_texts
+all_texts = leaf_texts.copy()
+all_text_strs = [doc.page_content for doc in all_texts]
+
+# Iterate through the results to extract summaries from each level and add them to all_texts
+for level in sorted(raptor_results.keys()):
+    # Extract summaries from the current level's DataFrame
+    summaries = raptor_results[level][1]["summaries"].tolist()
+    # Extend all_texts with the summaries from the current level
+    all_text_strs.extend(summaries)
+
+
+vectorstore = Chroma.from_texts(texts=all_text_strs, embedding=OpenAIEmbeddings())
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
 
@@ -86,5 +103,5 @@ rag_chain = (
 )
 
 # Question
-result = rag_chain.invoke("Emma's pills?")
+result = rag_chain.invoke("Why is Emma so upset in the car?")
 print(result)
