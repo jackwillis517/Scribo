@@ -1,42 +1,29 @@
-from raptor import raptor 
 from dotenv import load_dotenv
+from build_index import build_index 
 from langchain.load import dumps, loads
-from langchain_community.vectorstores import Chroma, Weaviate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores.upstash import UpstashVectorStore
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 
 load_dotenv()
+# persist_dir = "./chroma_store"
 
-loader = PyPDFLoader("./Hiraeth.pdf")
-docs = loader.load()
+# build_index(pdf_path="./Hiraeth.pdf", persist_dir=persist_dir)
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-splits = text_splitter.split_documents(docs)
+embeddings = OpenAIEmbeddings()
 
+vectorstore = UpstashVectorStore(
+    namespace="raptor_rag",
+    embedding=embeddings
+)
 
-# RAPTOR 
-leaf_texts = splits
-raptor_results = raptor(leaf_texts, level=1, n_levels=3)
+# build_index(pdf_path="./Hiraeth.pdf")
 
-# Initialize all_texts with leaf_texts
-all_texts = leaf_texts.copy()
-all_text_strs = [doc.page_content for doc in all_texts]
+# vectorstore = Chroma(embedding_function=OpenAIEmbeddings(), persist_directory=persist_dir)
 
-# Iterate through the results to extract summaries from each level and add them to all_texts
-for level in sorted(raptor_results.keys()):
-    # Extract summaries from the current level's DataFrame
-    summaries = raptor_results[level][1]["summaries"].tolist()
-    # Extend all_texts with the summaries from the current level
-    all_text_strs.extend(summaries)
-
-
-vectorstore = Chroma.from_texts(texts=all_text_strs, embedding=OpenAIEmbeddings())
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-
 
 # RAG-Fusion
 template = """You are an AI language model assistant. Your task is to generate four 
@@ -84,7 +71,6 @@ generate_queries = (
 
 rag_fusion_retrieval_chain = generate_queries | retriever.map() | reciprocal_rank_fusion
 
-
 prompt = PromptTemplate.from_template('''You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you dont know the answer, just say that you dont know. Use three sentences maximum and keep the answer concise.
 Question: {question} 
 Context: {context} 
@@ -102,6 +88,6 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# Question
-result = rag_chain.invoke("Why is Emma so upset in the car?")
-print(result)
+def rag_pipeline(prompt: str) -> str:
+    result = rag_chain.invoke(prompt)
+    return result
