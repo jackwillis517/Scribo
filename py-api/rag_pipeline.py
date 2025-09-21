@@ -8,9 +8,6 @@ from langchain_community.vectorstores.upstash import UpstashVectorStore
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
 
 load_dotenv()
-# persist_dir = "./chroma_store"
-
-# build_index(pdf_path="./Hiraeth.pdf", persist_dir=persist_dir)
 
 embeddings = OpenAIEmbeddings()
 
@@ -19,11 +16,10 @@ vectorstore = UpstashVectorStore(
     embedding=embeddings
 )
 
+# Uncomment to build the RAPTOR index (very slow)
 # build_index(pdf_path="./Hiraeth.pdf")
 
-# vectorstore = Chroma(embedding_function=OpenAIEmbeddings(), persist_directory=persist_dir)
-
-retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
 # RAG-Fusion
 template = """You are an AI language model assistant. Your task is to generate four 

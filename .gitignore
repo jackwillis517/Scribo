@@ -2,12 +2,9 @@
 .env
 .vscode/
 Hiraeth.pdf
-chroma_store
-
-__pycache__/
-*.pyc
-*.pyo
 
 py-api/__pycache__/
 py-api/**/*.pyc
 py-api/**/*.pyo
+
+py-api/chromadb/
