@@ -16,7 +16,7 @@
   Create books, chapters, and notes, all stored relationally with support for custom summaries and metadata.
 
 - 🧠 **Scalable AI Layer**  
-  Python + LangChain agents + Weaviate vector search for high-performance document retrieval.
+  Python + LangChain agents + Chroma vector search for high-performance document retrieval.
 
 - 🖋️ **Rich Text Editor Built with Tiptap**  
   Clean, distraction-free writing experience with inline AI actions.
