@@ -20,6 +20,7 @@ type Application struct {
 	DocumentHandler *api.DocumentHandler
 	SectionHandler  *api.SectionHandler
 	NoteHandler     *api.NoteHandler
+	AgentHandler    *api.AgentHandler
 	Middleware      middleware.UserMiddleware
 }
 
@@ -48,6 +49,7 @@ func NewApplication() (*Application, error) {
 	documentHandler := api.NewDocumentHandler(documentStore, logger)
 	sectionHandler := api.NewSectionHandler(sectionStore, logger)
 	noteHandler := api.NewNoteHandler(noteStore, logger)
+	agentHandler := api.NewAgentHandler(logger)
 	middlewareHandler := middleware.UserMiddleware{UserStore: userStore}
 
 	app := &Application{
@@ -57,6 +59,7 @@ func NewApplication() (*Application, error) {
 		DocumentHandler: documentHandler,
 		SectionHandler:  sectionHandler,
 		NoteHandler:     noteHandler,
+		AgentHandler:    agentHandler,
 		Middleware:      middlewareHandler,
 	}
 
