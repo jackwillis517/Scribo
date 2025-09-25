@@ -1,0 +1,80 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, FileText, Calendar } from "lucide-react";
+import type { Document } from "@/data/mockData";
+
+interface DocumentListProps {
+  documents: Document[];
+  onAddDocument?: () => void;
+}
+
+export const DocumentList = ({ documents, onAddDocument }: DocumentListProps) => {
+//   const navigate = useNavigate();
+
+//   const handleDocumentClick = (documentId: string) => {
+//     navigate(`/documents/${documentId}`);
+//   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  return (
+    <div className="space-y-6 bg-neutral-900 p-10">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl text-white font-bold tracking-tight">Documents</h1>
+          <p className="text-white mt-2">
+            Manage and edit your documents with AI assistance
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {documents.map((document) => (
+          <Card 
+            key={document.id}
+            className="cursor-pointer bg-neutral-800 transition-all duration-200 hover:shadow-elegant hover:-translate-y-1 border-muted"
+            // onClick={() => handleDocumentClick(document.id)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <FileText className="h-6 w-6 text-orange-400 mt-1" />
+              </div>
+              <CardTitle className="text-lg text-white leading-6">{document.title}</CardTitle>
+              <CardDescription className="text-white text-sm line-clamp-2">
+                {document.description}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex items-center justify-between text-xs text-white">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  <span>{formatDate(document.updatedAt)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        
+        <Card 
+          className="cursor-pointer transition-all text-neutral-700 duration-200 hover:shadow-elegant hover:-translate-y-1 border-dashed border-2"
+          onClick={onAddDocument}
+        >
+          <CardContent className="flex flex-col text-white items-center justify-center h-40 space-y-4">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Plus className="h-8 w-8 text-orange-400" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium">Add Document</p>
+              <p className="text-sm text-muted-foreground">Create a new document</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
