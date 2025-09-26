@@ -1,16 +1,19 @@
-import Navbar from "../components/Navbar";
 import { DocumentList } from "../components/DocumentList";
 import { mockDocuments } from "@/data/mockData";
+import { createFileRoute } from '@tanstack/react-router'
 
 const handleAddDocument = () => {}
 
-const Dashboard = () => {
+const Index = () => {
     return (
       <>
-        <Navbar />
         <DocumentList documents={mockDocuments} onAddDocument={handleAddDocument} />
       </>
   );
 } 
 
-export default Dashboard;
+export const Route = createFileRoute("/")({
+  component: Index,
+})
+
+
