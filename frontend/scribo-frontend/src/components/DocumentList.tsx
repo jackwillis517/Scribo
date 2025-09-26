@@ -1,18 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, FileText, Calendar } from "lucide-react";
 import type { Document } from "@/data/mockData";
+import { useNavigate } from "@tanstack/react-router";
 
 interface DocumentListProps {
   documents: Document[];
   onAddDocument?: () => void;
 }
 
-export const DocumentList = ({ documents, onAddDocument }: DocumentListProps) => {
-//   const navigate = useNavigate();
+export const DocumentList = ({ documents }: DocumentListProps) => {
+  const navigate = useNavigate();
 
-//   const handleDocumentClick = (documentId: string) => {
-//     navigate(`/documents/${documentId}`);
-//   };
+  const handleDocumentClick = (documentId: string) => {
+    navigate({ to: `/documents/${documentId}` });
+  };
+
+  const handleAddDocument = () => {
+    // Logic to add a new document
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -37,12 +42,12 @@ export const DocumentList = ({ documents, onAddDocument }: DocumentListProps) =>
         {documents.map((document) => (
           <Card 
             key={document.id}
-            className="cursor-pointer bg-neutral-800 transition-all duration-200 hover:shadow-elegant hover:-translate-y-1 border-muted"
-            // onClick={() => handleDocumentClick(document.id)}
+            className="cursor-pointer bg-neutral-800 transition-all duration-200 hover:shadow-elegant hover:-translate-y-1 border border-gray-500"
+            onClick={() => handleDocumentClick(document.id)}
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <FileText className="h-6 w-6 text-orange-400 mt-1" />
+                <FileText className="h-6 w-6 text-orange-500 mt-1" />
               </div>
               <CardTitle className="text-lg text-white leading-6">{document.title}</CardTitle>
               <CardDescription className="text-white text-sm line-clamp-2">
@@ -62,11 +67,11 @@ export const DocumentList = ({ documents, onAddDocument }: DocumentListProps) =>
         
         <Card 
           className="cursor-pointer transition-all text-neutral-700 duration-200 hover:shadow-elegant hover:-translate-y-1 border-dashed border-2"
-          onClick={onAddDocument}
+          onClick={() => handleAddDocument()}
         >
           <CardContent className="flex flex-col text-white items-center justify-center h-40 space-y-4">
             <div className="p-3 rounded-full bg-primary/10">
-              <Plus className="h-8 w-8 text-orange-400" />
+              <Plus className="h-8 w-8 text-orange-500" />
             </div>
             <div className="text-center">
               <p className="font-medium">Add Document</p>
