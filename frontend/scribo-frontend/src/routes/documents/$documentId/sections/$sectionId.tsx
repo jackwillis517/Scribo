@@ -43,9 +43,9 @@ const Section = () => {
               <Button 
                 variant="ghost" 
                 onClick={() => navigate({to: `/documents/${document.id}`})}
-                className="gap-2 cursor-pointer"
+                className="gap-2 cursor-pointer hover:bg-orange-500"
               >
-                <ArrowLeft className="h-4 w-4 cursor-pointer" />
+                <ArrowLeft className="h-4 w-4 cursor-pointer hover:bg-orange-500" />
                 Back to Document
               </Button>
               <div>

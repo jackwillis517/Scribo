@@ -36,7 +36,7 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive('bold') ? 'bg-muted' : ''}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <Bold className="h-4 w-4" />
         </Button>
@@ -44,7 +44,7 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive('italic') ? 'bg-muted' : ''}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <Italic className="h-4 w-4" />
         </Button>
@@ -53,7 +53,7 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive('bulletList') ? 'bg-muted' : ''}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <List className="h-4 w-4" />
         </Button>
@@ -61,7 +61,7 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive('orderedList') ? 'bg-muted' : ''}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <ListOrdered className="h-4 w-4" />
         </Button>
@@ -69,16 +69,17 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={editor.isActive('blockquote') ? 'bg-muted' : ''}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <Quote className="h-4 w-4" />
         </Button>
-        <div className="w-px h-6 bg-border mx-1" />
+        <div className="w-px h-6 bg-gray-500 mx-1" />
         <Button
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <Undo className="h-4 w-4" />
         </Button>
@@ -87,6 +88,7 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
           size="sm"
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
+          className="hover:bg-orange-500 cursor-pointer"
         >
           <Redo className="h-4 w-4" />
         </Button>

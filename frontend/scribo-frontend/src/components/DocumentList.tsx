@@ -5,7 +5,6 @@ import { useNavigate } from "@tanstack/react-router";
 
 interface DocumentListProps {
   documents: Document[];
-  onAddDocument?: () => void;
 }
 
 export const DocumentList = ({ documents }: DocumentListProps) => {

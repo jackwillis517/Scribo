@@ -25,11 +25,11 @@ export const SectionList = ({ sections }: SectionListProps) => {
         </p>
       </div>
 
-      <div className="space-y-3 bg-neutral-800">
+      <div className="space-y-3 ">
         {sections.map((section) => (
           <Card 
             key={section.id}
-            className="cursor-pointer transition-all duration-200 hover:shadow-soft border border-gray-500"
+            className="cursor-pointer transition-all duration-200 hover:shadow-soft hover:border-orange-500 border border-gray-500 bg-neutral-800"
             onClick={() => handleSectionClick(section.id)}
           >
             <CardHeader className="pb-3">
@@ -38,7 +38,7 @@ export const SectionList = ({ sections }: SectionListProps) => {
                   <Edit3 className="h-4 w-4 text-orange-500" />
                   <CardTitle className="text-lg">{section.title}</CardTitle>
                 </div>
-                <ChevronRight className="h-4 w-4 text-white transition-transform group-hover:translate-x-1" />
+                <ChevronRight className="h-4 w-4 text-white transition-transform hover:m-4" />
               </div>
               <CardDescription className="line-clamp-2 text-sm text-gray-300">
                 {section.preview}

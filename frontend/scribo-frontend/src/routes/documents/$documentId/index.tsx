@@ -39,9 +39,9 @@ const Document = () => {
           <Button 
             variant="ghost" 
             onClick={() => navigate({to: '/'})}
-            className="gap-2 text-white cursor-pointer"
+            className="gap-2 text-white cursor-pointer hover:bg-orange-500"
           >
-            <ArrowLeft className="h-4 w-4 text-white cursor-pointer" />
+            <ArrowLeft className="h-4 w-4 text-white cursor-pointer hover:bg-orange-500" />
             Back to Dashboard
           </Button>
 
@@ -49,8 +49,8 @@ const Document = () => {
           <Card className="shadow-soft bg-neutral-800 border-gray-500">
             <CardHeader>
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg">
-                  <FileText className="h-6 w-6 text-orange-500" />
+                <div className="p-3 rounded-lg bg-orange-500">
+                  <FileText className="h-6 w-6 text-white " />
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-2xl mb-2">{document.title}</CardTitle>

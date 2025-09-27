@@ -108,7 +108,7 @@ export const AgentPanel = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask a question or request help..."
-            className="flex-1 border border-gray-500 focus:border-primary focus:ring-0"
+            className="flex-1 border border-gray-500 text-white focus:ring-0 focus:border-orange-500"
           />
           <Button 
             onClick={handleSendMessage}
