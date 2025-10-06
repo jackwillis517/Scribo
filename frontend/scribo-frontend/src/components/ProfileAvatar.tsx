@@ -17,15 +17,14 @@ export const ProfileAvatar = () => {
     <DropdownMenu>
       <DropdownMenuTrigger>
         <img
-        // TODO: replace src with {user.picture} once the AuthProvider is fetching from the Go API
-          src="../../assets/profile_pic.jpg"
+          src={user.picture}
           alt={user.name}
           className="w-10 h-10 rounded-full cursor-pointer border-2 border-gray-300"
         />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled>{user.name}</DropdownMenuItem>
+      <DropdownMenuContent align="end" className="bg-neutral-800 border border-gray-500 text-white">
+        <DropdownMenuItem>{user.name}</DropdownMenuItem>
         <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -7,9 +7,12 @@ import (
 
 func SetupRoutes(app *app.Application) *chi.Mux {
 	r := chi.NewRouter()
+	r.Use(app.Middleware.CORSMiddleware)
 
 	r.Group(func(r chi.Router) {
 		r.Use(app.Middleware.Authenticate)
+
+		r.Get("/user/getUser", app.UserHandler.HandleGetUser)
 
 		r.Post("/documents/createDocument", app.DocumentHandler.HandleCreateDocument)
 		r.Get("/documents/readDocument", app.DocumentHandler.HandleReadDocument)
@@ -30,5 +33,6 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 
 	r.Get("/health", app.HealthCheck)
 	r.Post("/login", app.UserHandler.HandleUserLogin)
+	r.Post("/user/invalidateUser", app.UserHandler.HandleInvalidateUser)
 	return r
 }

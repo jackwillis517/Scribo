@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { AuthProvider } from "./auth/authProvider";
+import { AuthProvider } from "./auth/AuthProvider.tsx";
 import './index.css';
 
 // Import the generated route tree

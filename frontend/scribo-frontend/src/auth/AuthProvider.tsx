@@ -2,29 +2,73 @@ import { useState, useEffect } from "react";
 import { useGoogleLogin, googleLogout } from "@react-oauth/google";
 import { AuthContext } from "./authContext";
 import type { User } from "./authContext";
+import postLogin from "../api/postLogin.ts";
+import getUser from "../api/getUser.ts";
+import invalidateUser from "../api/invalidateUser.ts";
+
+const getCookie = (name: string) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift();
+  return null;
+}
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) setUser(JSON.parse(storedUser));
+        const jwtToken = getCookie("auth_token");
+        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+
+        if (jwtToken && storedUser) {
+          setUser(storedUser);
+          return;
+        }
+
+        if (jwtToken && !storedUser) {
+          getUser()
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to get user data");
+            return res.json();
+          })
+          .then((user) => {
+            setUser(user);
+            localStorage.setItem("user", JSON.stringify(user));
+          })
+          .catch(async () => {
+            setUser(null);
+            localStorage.removeItem("user");
+            invalidateUser();
+          });
+          return;
+        } 
+
+        if (!jwtToken && !storedUser) {
+          setUser(null);
+          return;
+        }
+        
+        if (!jwtToken && storedUser) {
+          setUser(null);
+          localStorage.removeItem("user");
+          return;
+        }
     }, []);
 
     const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      console.log("Google OAuth Token Response:", tokenResponse);
+      flow: "auth-code",
+      onSuccess: async (tokenResponse) => {
+        try {
+          const data = await postLogin(tokenResponse.code);
 
-      try {
-        // TODO: Fetch user info from Go API
-        const profile = {"id": "123", "email": "user@example.com", "name": "John Doe", "picture": "https://example.com/profile.jpg"};
-        setUser({
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            picture: profile.picture,
-        })
-        localStorage.setItem("user", JSON.stringify(profile));
+          const profile = {"id": data.google_id, "email": data.email, "name": data.name, "picture": data.picture};
+          setUser({
+              id: data.google_id,
+              name: data.name,
+              email: data.email,
+              picture: data.picture,
+          })
+          localStorage.setItem("user", JSON.stringify(profile));
          
       } catch (error) {
         console.error("Failed to fetch user info:", error);        
@@ -39,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     googleLogout();
     setUser(null);
     localStorage.removeItem("user");
-    //  TODO: Call Go API to invalidate auth cookie
+    invalidateUser()
   }
 
   return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
