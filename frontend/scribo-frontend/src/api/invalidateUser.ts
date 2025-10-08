@@ -1,5 +1,5 @@
 export default async function invalidateUser() {
-  const response = await fetch(`http://localhost:8081/user/invalidateUser`, {
+  const response = await fetch(`/api/user/invalidateUser`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

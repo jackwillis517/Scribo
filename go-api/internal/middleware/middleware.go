@@ -54,6 +54,7 @@ func (um *UserMiddleware) Authenticate(next http.Handler) http.Handler {
 		if err != nil {
 			if err == http.ErrNoCookie {
 				utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "unauthorized: missing auth token"})
+				return
 			}
 
 			utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "bad request"})

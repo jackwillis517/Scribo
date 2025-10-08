@@ -136,7 +136,7 @@ func (pg *PostgresDocumentStore) DeleteDocument(documentId string) error {
 
 func (pg *PostgresDocumentStore) GetAllDocuments(user *User) ([]*Document, error) {
 	query := `
-		SELECT id, user_id, title, description, length, num_chapters, created_at, updated_at
+		SELECT id, user_id, title, description, length, num_words, num_sections, created_at, updated_at
 		FROM documents
 		WHERE user_id = $1
 		ORDER BY created_at DESC

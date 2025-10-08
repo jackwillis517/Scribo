@@ -1,7 +1,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { DocumentList } from "../components/DocumentList";
-import { mockDocuments } from "@/data/mockData";
+// import { mockDocuments } from "@/data/mockData";
 import { useAuth } from '@/auth/useAuth';
 
 const Index = () => {
@@ -14,8 +14,7 @@ const Index = () => {
     </div>;
   }
 
-  // TODO: Update DocumentList to fetch real documents
-  return <DocumentList documents={mockDocuments} />
+  return <DocumentList />
 } 
 
 export const Route = createFileRoute("/")({

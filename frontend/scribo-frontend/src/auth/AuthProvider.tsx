@@ -6,53 +6,37 @@ import postLogin from "../api/postLogin.ts";
 import getUser from "../api/getUser.ts";
 import invalidateUser from "../api/invalidateUser.ts";
 
-const getCookie = (name: string) => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift();
-  return null;
-}
+// function getCookie(name: string): string | null {
+//   const value = `; ${document.cookie}`;
+//   const parts = value.split(`; ${name}=`);
+//   if (parts.length === 2) {
+//     return parts.pop()?.split(';').shift() || null;
+//   }
+//   return null;
+// }
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const jwtToken = getCookie("auth_token");
-        const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+      const storedUser = JSON.parse(localStorage.getItem("user") || "null");
 
-        if (jwtToken && storedUser) {
-          setUser(storedUser);
-          return;
-        }
+      if (storedUser) {
+        // console.log("User found in local storage.");
+        setUser(storedUser);
+      }
 
-        if (jwtToken && !storedUser) {
-          getUser()
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to get user data");
-            return res.json();
-          })
-          .then((user) => {
-            setUser(user);
-            localStorage.setItem("user", JSON.stringify(user));
-          })
-          .catch(async () => {
-            setUser(null);
-            localStorage.removeItem("user");
-            invalidateUser();
-          });
-          return;
-        } 
-
-        if (!jwtToken && !storedUser) {
-          setUser(null);
-          return;
-        }
-        
-        if (!jwtToken && storedUser) {
-          setUser(null);
-          localStorage.removeItem("user");
-          return;
-        }
+      getUser()
+      .then((user) => {
+        // console.log("User verified:", user);
+        setUser(user);
+        localStorage.setItem("user", JSON.stringify(user));
+      })
+      .catch((error) => {
+        console.log("Failed to verify user authentication:", error);
+        setUser(null);
+        localStorage.removeItem("user");
+      });
     }, []);
 
     const login = useGoogleLogin({
@@ -69,7 +53,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               picture: data.picture,
           })
           localStorage.setItem("user", JSON.stringify(profile));
-         
       } catch (error) {
         console.error("Failed to fetch user info:", error);        
       }
@@ -83,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     googleLogout();
     setUser(null);
     localStorage.removeItem("user");
-    invalidateUser()
+    invalidateUser();
   }
 
   return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;

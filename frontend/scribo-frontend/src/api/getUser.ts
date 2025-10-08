@@ -1,5 +1,5 @@
 export default async function getUser() {
-  const response = await fetch(`http://localhost:8081/user/getUser`, {
+  const response = await fetch(`/api/user/getUser`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

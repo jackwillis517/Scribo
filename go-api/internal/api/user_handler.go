@@ -158,6 +158,8 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 			Secure:   false,
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(72 * time.Hour),
+			MaxAge:   259200,
+			Domain:   "localhost",
 		})
 
 		utils.WriteJSON(w, http.StatusAccepted, utils.Envelope{
@@ -177,6 +179,8 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// fmt.Printf("%v", tokenString)
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "auth_token",
 		Value:    tokenString,
@@ -185,6 +189,8 @@ func (u *UserHandler) HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(72 * time.Hour),
+		MaxAge:   259200,
+		Domain:   "localhost",
 	})
 
 	utils.WriteJSON(w, http.StatusAccepted, utils.Envelope{
@@ -214,5 +220,7 @@ func (u *UserHandler) HandleInvalidateUser(w http.ResponseWriter, r *http.Reques
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(72 * time.Hour),
+		MaxAge:   259200,
+		Domain:   "localhost",
 	})
 }
