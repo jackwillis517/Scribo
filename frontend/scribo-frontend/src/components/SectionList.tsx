@@ -1,7 +1,6 @@
 import { Card,  CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from '@tanstack/react-router';
 import type { Section } from "@/data/mockData";
-
 import { ChevronRight, Edit3 } from "lucide-react";
 
 interface SectionListProps {

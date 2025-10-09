@@ -3,35 +3,55 @@ import { useState } from "react";
 import { Editor } from "@/components/Editor";
 import { AgentPanel } from "@/components/AgentPanel";
 import { Button } from "@/components/ui/button";
-import { getDocumentById, getSectionById } from "@/data/mockData";
+// import { getDocumentById, getSectionById } from "@/data/mockData";
 import { ArrowLeft, PanelRightClose, PanelRightOpen, Save } from "lucide-react";
+import { useQuery } from '@tanstack/react-query';
+import getDocumentById from '@/api/getDocumentById';
+import getSectionById from '@/api/getSectionById';
 
 const Section = () => {
   const { documentId, sectionId } = Route.useParams()
-  const navigate = useNavigate();
-  
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [content, setContent] = useState('');
+  const navigate = useNavigate();
+
+  const {isLoading: isDocumentLoading, data: document } = useQuery({
+    queryKey: ['document-info', documentId],
+    queryFn: () => getDocumentById(documentId!),
+    staleTime: 30000,
+    enabled: !!documentId,
+  });
+
+  const {isLoading: isSectionLoading, data: section } = useQuery({
+    queryKey: ['section-info', sectionId],
+    queryFn: () => getSectionById(sectionId!),
+    staleTime: 30000,
+    enabled: !!sectionId,
+  });
+
+  // const document = getDocumentById(documentId);
+  // const section = getSectionById(sectionId);
+
+  const handleSave = () => {
+    // Save popup here
+  };
 
   if (!sectionId) {
     return <div>Section not found</div>;
   }
-
-  const document = getDocumentById(documentId);
-  const section = getSectionById(sectionId);
 
   if (!document || !section) {
     return <div>Section not found</div>;
   }
 
   // Initialize content if not already set
-  if (!content && section.content) {
-    setContent(section.content);
+  if (!content && section.section.content) {
+    setContent(section.section.content);
   }
 
-  const handleSave = () => {
-    // Save popup here
-  };
+  if (isDocumentLoading || isSectionLoading) {
+    return <div> Loading...</div>
+  }
 
   return (
     <div className="min-h-screen text-white">
@@ -42,15 +62,15 @@ const Section = () => {
             <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
-                onClick={() => navigate({to: `/documents/${document.id}`})}
+                onClick={() => navigate({to: `/documents/${document.document.id}`})}
                 className="gap-2 cursor-pointer hover:bg-orange-500"
               >
                 <ArrowLeft className="h-4 w-4 cursor-pointer hover:bg-orange-500" />
                 Back to Document
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">{section.title}</h1>
-                <p className="text-sm text-gray-300">{document.title}</p>
+                <h1 className="text-2xl font-bold">{section.section.title}</h1>
+                <p className="text-sm text-gray-300">{document.document.title}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -87,7 +107,7 @@ const Section = () => {
               <Editor
                 content={content}
                 onChange={setContent}
-                placeholder={`Start writing ${section.title.toLowerCase()}...`}
+                placeholder={`Start writing ${section.section.title.toLowerCase()}...`}
               />
             </div>
 

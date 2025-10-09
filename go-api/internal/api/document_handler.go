@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -69,7 +68,7 @@ func (dh *DocumentHandler) HandleReadDocument(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	fmt.Println(documentId)
+	// fmt.Println(documentId)
 	document, err := dh.documentStore.ReadDocument(documentId.DocumentId)
 	if err != nil {
 		dh.logger.Printf("ERROR: readDocument: %v", err)

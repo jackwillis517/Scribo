@@ -12,8 +12,8 @@ type Document = {
   length: number;
   num_words: number;
   num_sections: number;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export const DocumentList = () => {
@@ -79,7 +79,7 @@ export const DocumentList = () => {
               <div className="flex items-center justify-between text-xs text-white">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  <span>{formatDate(document.updatedAt)}</span>
+                  <span>{formatDate(document.created_at)}</span>
                 </div>
               </div>
             </CardContent>
