@@ -1,7 +1,6 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { DocumentList } from "../components/DocumentList";
-// import { mockDocuments } from "@/data/mockData";
 import { useAuth } from '@/auth/useAuth';
 
 const Index = () => {
