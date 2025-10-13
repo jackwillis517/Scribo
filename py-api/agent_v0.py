@@ -111,7 +111,7 @@ def create_agent():
 def handle_message(document_id: str, thread_id: str | None, message: str):
     if thread_id is None:
         thread_id = create_conversation(document_id)
-    add_message(document_id,thread_id, "user", message)
+    add_message(document_id, thread_id, "user", message)
 
     agent = create_agent()
     inputs = {"messages": [("user", message)]}
@@ -154,18 +154,4 @@ if __name__ == "__main__":
 
     # db_cursor.close()
     # db_conn.close()
-
-
-# def print_stream(stream):
-#     for s in stream:
-#         message = s["messages"][-1]
-#         if isinstance(message, tuple):
-#             print(message)
-#         else:
-#             message.pretty_print()
-
-# inputs = {"messages": [("user", "How many medications are Emma on?")]}
-# print_stream(app.stream(inputs, stream_mode="values"))
-# result = agent.invoke(input=inputs)
-# print(result["messages"][-1].content)
 

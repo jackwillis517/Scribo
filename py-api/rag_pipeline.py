@@ -16,18 +16,15 @@ vectorstore = UpstashVectorStore(
     embedding=embeddings
 )
 
-# Uncomment to build the RAPTOR index (very slow)
-# build_index(pdf_path="./Hiraeth.pdf")
-
 retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
 # RAG-Fusion
-template = """You are an AI language model assistant. Your task is to generate four 
+template = """You are an AI language model assistant. Your task is to generate three 
 different versions of the given user question to retrieve relevant documents from a vector 
 database. By generating multiple perspectives on the user question, your goal is to help
 the user overcome some of the limitations of the distance-based similarity search. 
 Provide these alternative questions separated by newlines. Original question: {question} \n
-Output (4 queries):"""
+Output (3 queries):"""
 prompt_rag_fusion = ChatPromptTemplate.from_template(template)
 
 def reciprocal_rank_fusion(results: list[list], k=60):

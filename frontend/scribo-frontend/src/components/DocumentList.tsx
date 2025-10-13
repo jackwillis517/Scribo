@@ -1,22 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, FileText, Calendar } from "lucide-react";
-// import type { Document } from "@/data/mockData";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import type { Document } from "@/api/types";
 import getAllDocuments from "../api/getAllDocuments";
 
-type Document = {
-  id: string;
-  title: string;
-  description: string;
-  length: number;
-  num_words: number;
-  num_sections: number;
-  created_at: string;
-  updated_at: string;
-};
+// import type { Document } from "@/data/mockData";
+// type Document = {
+//   id: string;
+//   title: string;
+//   description: string;
+//   length: number;
+//   num_words: number;
+//   num_sections: number;
+//   created_at: string;
+//   updated_at: string;
+// };
 
-export const DocumentList = () => {
+export const DocumentList = ({ onAddDocument }: { onAddDocument: () => void }) => {
   const navigate = useNavigate();
 
   const {isLoading, data } = useQuery({
@@ -27,10 +28,6 @@ export const DocumentList = () => {
 
   const handleDocumentClick = (documentId: string) => {
     navigate({ to: `/documents/${documentId}` });
-  };
-
-  const handleAddDocument = () => {
-    // Logic to add a new document
   };
 
   const formatDate = (dateString: string) => {
@@ -53,7 +50,7 @@ export const DocumentList = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl text-white font-bold tracking-tight">Documents</h1>
-          <p className="text-white mt-2">
+          <p className="text-gray-300 mt-2">
             Manage and edit your documents with AI assistance
           </p>
         </div>
@@ -71,12 +68,12 @@ export const DocumentList = () => {
                 <FileText className="h-6 w-6 text-orange-500 mt-1" />
               </div>
               <CardTitle className="text-lg text-white leading-6">{document.title}</CardTitle>
-              <CardDescription className="text-white text-sm line-clamp-2">
+              <CardDescription className="text-gray-300 text-sm line-clamp-2">
                 {document.description}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="flex items-center justify-between text-xs text-white">
+              <div className="flex items-center justify-between text-xs text-gray-300">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   <span>{formatDate(document.created_at)}</span>
@@ -88,7 +85,7 @@ export const DocumentList = () => {
         
         <Card 
           className="cursor-pointer transition-all text-neutral-700 duration-200 hover:shadow-elegant hover:-translate-y-1 border-dashed border-2"
-          onClick={() => handleAddDocument()}
+          onClick={() => onAddDocument()}
         >
           <CardContent className="flex flex-col text-white items-center justify-center h-40 space-y-4">
             <div className="p-3 rounded-full bg-primary/10">
@@ -101,6 +98,7 @@ export const DocumentList = () => {
           </CardContent>
         </Card>
       </div>
+      
     </div>
   );
 };

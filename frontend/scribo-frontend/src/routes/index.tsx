@@ -1,10 +1,12 @@
-
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router'
-import { DocumentList } from "../components/DocumentList";
+import { DocumentList } from "@/components/DocumentList";
+import { CreateDocumentForm } from '@/components/CreateDocumentForm';
 import { useAuth } from '@/auth/useAuth';
 
 const Index = () => {
   const { user } = useAuth();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   if (!user) {
     return <div className="flex flex-col items-center justify-center min-h-screen">
@@ -13,8 +15,29 @@ const Index = () => {
     </div>;
   }
 
-  return <DocumentList />
-} 
+  const handleAddDocument = () => {
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCreateDocument = async (data: {
+    title: string;
+    description?: string;
+    defaultSectionName?: string;
+  }) => {
+    console.log("Creating document with data:", data);
+  };
+
+  return (
+    <>
+      <DocumentList onAddDocument={handleAddDocument} />
+      <CreateDocumentForm
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSubmit={handleCreateDocument}
+      />
+    </>
+  );
+}
 
 export const Route = createFileRoute("/")({
   component: Index,
