@@ -1,0 +1,7 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false,
+  "reportUnusedVariable": true,
+  "reportUnusedImport": true,
+  "reportArgumentType": false
+}
