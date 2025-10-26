@@ -1,169 +1,148 @@
+import hashlib
+from os import name
+from typing_extensions import ChainMap
+from langchain_core.prompts.chat import MessageLike
+from langgraph.checkpoint.serde.types import Update
 import psycopg
-
-# from pydantic import BaseModel
+from typing import List
+from flask_cors import CORS
+from pydantic import BaseModel
 from dotenv import load_dotenv
 from langchain.tools import tool
-from typing import List, Dict, Any
 from langchain_chroma import Chroma
-from langchain.load import dumps, loads
+from flask import Flask, request, jsonify
 from langchain_core.documents import Document
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.upstash import UpstashVectorStore
+from pydantic.types import SecretType
 
 load_dotenv()
 
+app = Flask(__name__)
+CORS(app, origin="*")
 
 # ============================================================================
 # CORE COMPONENTS
 # ============================================================================
+# Database connection
 db_conn = psycopg.connect(
     dbname="scribo", user="postgres", password="root", host="localhost", port="5432"
 )
 db_cursor = db_conn.cursor()
+
+# Embeddings
 embeddings = OpenAIEmbeddings()
+
+# Vector stores
 memory_vectorstore = Chroma(
     persist_directory="./chromadb", embedding_function=embeddings
 )
-document_vectorstore = UpstashVectorStore(namespace="raptor_rag", embedding=embeddings)
-# document_vectorstore = UpstashVectorStore(namespace="general", embedding=embeddings)
-# section_summary_vectorstore = UpstashVectorStore(
-#     namespace="summary", embedding=embeddings
-# )
+general_vectorstore = UpstashVectorStore(namespace="general", embedding=embeddings)
+section_summary_vectorstore = UpstashVectorStore(
+    namespace="summary", embedding=embeddings
+)
 
 
-# class QueryRouterOutput(BaseModel):
-#     intent: str
-#     scope: str
-#     requires_context: bool
+# Models
+class Section(BaseModel):
+    id: str
+    document_id: str
+    title: str
+    content: str
+    summary: str
+    metadata: dict
+    length: int
+    num_words: int
 
 
-# class QueryOptimizedOutput(BaseModel):
-#     optimized_query: str
-#     sub_queries: List[str]
-#     entities: List[str]
-#     filters: Dict[str, Any]
+# Helper functions
+def get_docs(
+    section: Section,
+    namespace: str = "section",
+    chunk_size: int = 1000,
+    chunk_overlap: int = 200,
+) -> List[Document]:
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
+    chunks = splitter.split_text(section.content)
 
-
-class Store:
-    """Handles Postgres operations"""
-
-    def __init__(self, db_conn, db_cursor):
-        self.db_conn = db_conn
-        self.db_cursor = db_cursor
-
-    def update_section(self, section_id: str, content: str):
-        """Updates a section in Postgres"""
-
-    def get_section_summary(self, section_id: str) -> str:
-        """Gets a section summary from Postgres"""
-
-    def store_section_summary(self, section_id: str, summary: str):
-        """Stores a section summary in Postgres"""
-
-    def create_conversation(self, document_id: str) -> str:
-        """Create a new conversation thread in DB and return thread_id"""
-        self.db_cursor.execute(
-            """
-            INSERT INTO conversations (document_id)
-            VALUES (%s)
-            RETURNING thread_id
-        """,
-            (document_id,),
-        )
-        thread_id = self.db_cursor.fetchone()[0]
-        self.db_conn.commit()
-        return thread_id
-
-    def add_message(
-        self, document_id: str, thread_id: str, role: str, content: str
-    ) -> None:
-        """Add a message to a conversation thread in DB"""
-        self.db_cursor.execute(
-            """
-            INSERT INTO messages (thread_id, role, content)
-            VALUES (%s, %s, %s)
-        """,
-            (thread_id, role, content),
+    docs = []
+    for i, chunk in enumerate(chunks):
+        vector_id = f"{section.id}_chunk{i}"
+        docs.append(
+            {
+                "page_content": chunk,
+                "metadata": {
+                    "id": vector_id,
+                    "namespace": namespace,
+                    "section_metadata": section.metadata,
+                    "section_id": section.id,
+                    "document_id": section.document_id,
+                },
+            }
         )
 
-        self.db_cursor.execute(
-            """
-            UPDATE conversations
-            SET updated_at = CURRENT_TIMESTAMP
-            WHERE thread_id = %s AND document_id = %s
-        """,
-            (thread_id, document_id),
-        )
-        self.db_conn.commit()
+    return docs
 
 
-def reciprocal_rank_fusion(results: list[list], k=60) -> list[tuple]:
-    """Reciprocal_rank_fusion that takes multiple lists of ranked documents
-    and an optional parameter k used in the RRF formula"""
-    # Initialize a dictionary to hold fused scores for each unique document
-    fused_scores = {}
-    # Iterate through each list of ranked documents
-    for docs in results:
-        # Iterate through each document in the list, with its rank (position in the list)
-        for rank, doc in enumerate(docs):
-            # Convert the document to a string format to use as a key (assumes documents can be serialized to JSON)
-            doc_str = dumps(doc)
-            # If the document is not yet in the fused_scores dictionary, add it with an initial score of 0
-            if doc_str not in fused_scores:
-                fused_scores[doc_str] = 0
-            # Retrieve the current score of the document, if any
-            previous_score = fused_scores[doc_str]
-            # Update the score of the document using the RRF formula: 1 / (rank + k)
-            fused_scores[doc_str] += 1 / (rank + k)
-
-    # Sort the documents based on their fused scores in descending order to get the final reranked results
-    reranked_results = [
-        (loads(doc), score)
-        for doc, score in sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)
-    ]
-
-    # Return the reranked results as a list of tuples, each containing the document and its fused score
-    return reranked_results
+# Database functions
+def create_conversation(document_id: str) -> str:
+    db_cursor.execute(
+        """
+        INSERT INTO conversations (document_id)
+        VALUES (%s)
+        RETURNING thread_id
+    """,
+        (document_id,),
+    )
+    thread_id = db_cursor.fetchone()[0]
+    db_conn.commit()
+    return thread_id
 
 
-def call_reciprocal_rank_fusion(query: str, k=3):
-    """Generates k queries and calls reciprocal_rank_fusion on them"""
-
-    template = """You are an AI language model assistant. Your task is to generate three
-    different versions of the given user question to retrieve relevant documents from a vector
-    database. By generating multiple perspectives on the user question, your goal is to help
-    the user overcome some of the limitations of the distance-based similarity search.
-    Provide these alternative questions separated by newlines. Original question: {question} \n
-    Output (3 queries):"""
-    prompt_rag_fusion = ChatPromptTemplate.from_template(template)
-
-    document_retriever = document_vectorstore.as_retriever(
-        search_type="similarity", search_kwargs={"k": k}
+def add_message(document_id: str, thread_id: str, role: str, content: str) -> None:
+    db_cursor.execute(
+        """
+        INSERT INTO messages (thread_id, role, content)
+        VALUES (%s, %s, %s)
+    """,
+        (thread_id, role, content),
     )
 
-    generate_queries = (
-        prompt_rag_fusion
-        | ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        | StrOutputParser()
-        | (lambda x: x.split("\n"))
+    db_cursor.execute(
+        """
+        UPDATE conversations
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE thread_id = %s AND document_id = %s
+    """,
+        (thread_id, document_id),
     )
+    db_conn.commit()
 
-    rag_fusion_retrieval_chain = (
-        generate_queries | document_retriever.map() | reciprocal_rank_fusion
+
+def update_section(section: Section) -> None:
+    db_cursor.execute(
+        """
+        UPDATE sections
+        SET title = %s, content = %s, summary = %s, metadata = %s, length = %s, num_words = %s, updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s
+    """,
+        (
+            section.title,
+            section.content,
+            section.summary,
+            section.metadata,
+            section.length,
+            section.num_words,
+            section.id,
+        ),
     )
-
-    result = rag_fusion_retrieval_chain.invoke(query)
-
-    print(type(result))
-
-    print(result[0])
-    for i in range(len(result)):
-        print(f"Score #{i + 1}: {result[i][1]}\n")
-        print("-----")
+    db_conn.commit()
 
 
 # ============================================================================
@@ -412,33 +391,102 @@ def create_agent():
     )
 
 
+# ============================================================================
+# SERVER
+# ============================================================================
+
+
 def handle_message(document_id: str, thread_id: str | None, message: str):
-    store = Store(db_conn=db_conn, db_cursor=db_cursor)
     if thread_id is None:
-        thread_id = store.create_conversation(document_id)
-    store.add_message(document_id, thread_id, "user", message)
+        thread_id = create_conversation(document_id)
+    add_message(document_id, thread_id, "user", message)
 
     agent = create_agent()
     inputs = {"messages": [("user", message)]}
     response = agent.invoke(
         input=inputs, config={"configurable": {"thread_id": thread_id}}
     )
-    for message in response["messages"]:
-        print(message)
-        print("|=========================|")
+    # for message in response["messages"]:
+    #     print(message)
+    #     print("|=========================|")
 
-    store.add_message(
-        document_id, thread_id, "assistant", response["messages"][-1].content
-    )
+    add_message(document_id, thread_id, "assistant", response["messages"][-1].content)
 
     return thread_id, response["messages"][-1].content
 
 
+def handle_save(section: Section) -> None:
+    # Get new section summary & metadata
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    summary_prompt = f"Summarize the following section of a document in four sentences:\n\n{section.content}"
+    new_summary = llm.invoke(summary_prompt).content.strip()
+
+    print(f"New summary: {new_summary}")
+
+    # Update section on Postgres
+    section.summary = new_summary
+    update_section(section)
+
+    print(f"Section updated: {section.id}")
+
+    # Chunk section and section summary
+    section_docs = get_docs(section=section)
+    summary_docs = get_docs(
+        section=section, namespace="summary", chunk_size=100, overlap=10
+    )
+
+    print(f"Section docs chunked: {len(section_docs)}")
+    print(f"Summary docs chunked: {len(summary_docs)}")
+
+    # Embed and upsert chunked documents
+    general_vectorstore.add_documents(documents=section_docs, namespace="general")
+    section_summary_vectorstore.add_documents(
+        documents=summary_docs, namespace="summary"
+    )
+
+    print("Documents embedded and upserted")
+
+
+@app.route("/message", methods=["POST"])
+def message():
+    document_id = request.json["document_id"]
+    thread_id = request.json.get("thread_id")
+    message = request.json["message"]
+
+    # Handle user message
+    thread_id, answer = handle_message(document_id, thread_id, message)
+
+    return jsonify({"thread_id": thread_id, "answer": answer})
+
+
+@app.route("/save", methods=["POST"])
+def embed():
+    section = Section(
+        title=request.json["title"],
+        content=request.json["content"],
+        summary=request.json["summary"],
+        metadata=request.json["metadata"],
+        length=request.json["length"],
+        num_words=request.json["num_words"],
+        id=request.json["id"],
+    )
+
+    try:
+        handle_save(section)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(e)
+        return jsonify({"status": "error", "message": str(e)})
+
+
 if __name__ == "__main__":
-    document_id = "c4db96ea-52e8-4a85-a028-02551ee90618"
-    # thread_id = "231d02eb-d49b-4b4d-9091-781d424d2143"
-    thread_id = None
-    message = "What medication is Emma on?"
+    app.run(debug=True, port=5001)
+
+    # document_id = "c4db96ea-52e8-4a85-a028-02551ee90618"
+    # thread_id = "231d02eb-d49b-4b4d-9091-781d424d2143 "
+    # thread_id = None
+
+    # message = "What medication is Emma on?"
     # message = """
     #     Edit this:
 
@@ -448,8 +496,8 @@ if __name__ == "__main__":
     #     went fairly well all things considered.
     # """
 
-    thread_id, answer = handle_message(document_id, thread_id, message)
-    print(f"Thread ID: {thread_id} \nAnswer: {answer}")
+    # thread_id, answer = handle_message(document_id, thread_id, message)
+    # print(f"Thread ID: {thread_id} \nAnswer: {answer}")
 
-    db_cursor.close()
-    db_conn.close()
+    # db_cursor.close()
+    # db_conn.close()
