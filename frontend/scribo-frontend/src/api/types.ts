@@ -1,13 +1,22 @@
 export interface Document {
-    id: string;
-    user_id: string;
-    title: string;
-    description: string;
-    length: number;
-    num_words: number;
-    num_sections: number;
-    created_at: string;
-    updated_at: string;
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  length: number;
+  num_words: number;
+  num_sections: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NewDocument {
+  user_id: string;
+  title: string;
+  description: string;
+  length: number;
+  num_words: number;
+  num_sections: number;
 }
 
 export interface Section {

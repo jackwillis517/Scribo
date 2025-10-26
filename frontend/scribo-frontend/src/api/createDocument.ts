@@ -1,6 +1,6 @@
-import type { Document } from "./types";
+import type { NewDocument } from "./types";
 
-export default async function createDocument(document: Document) {
+export default async function createDocument(document: NewDocument) {
   const response = await fetch(`/api/documents/createDocument`, {
     method: "POST",
     headers: {

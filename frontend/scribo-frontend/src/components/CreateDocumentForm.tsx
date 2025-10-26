@@ -22,9 +22,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
 const documentSchema = z.object({
-  title: z.string().trim().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
-  description: z.string().trim().max(500, "Description must be less than 500 characters").optional(),
-  defaultSectionName: z.string().trim().max(100, "Section name must be less than 100 characters").optional(),
+  title: z
+    .string()
+    .trim()
+    .min(1, "Title is required")
+    .max(100, "Title must be less than 100 characters"),
+  description: z
+    .string()
+    .trim()
+    .max(500, "Description must be less than 500 characters")
+    .optional(),
 });
 
 type DocumentFormData = z.infer<typeof documentSchema>;
@@ -47,7 +54,6 @@ export const CreateDocumentForm = ({
     defaultValues: {
       title: "",
       description: "",
-      defaultSectionName: "",
     },
   });
 
@@ -65,11 +71,14 @@ export const CreateDocumentForm = ({
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
           <DialogDescription className="text-gray-300">
-            Add a new document with an optional default section.
+            Add a new document with an optional description.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="title"
@@ -77,7 +86,11 @@ export const CreateDocumentForm = ({
                 <FormItem>
                   <FormLabel>Document Title</FormLabel>
                   <FormControl>
-                    <Input className="text-gray-300 border border-gray-500 outline-none focus:ring-0 focus:ring-orange-500" placeholder="Enter document title" {...field} />
+                    <Input
+                      className="text-gray-300 border border-gray-500 outline-none focus:ring-0 focus:ring-orange-500"
+                      placeholder="Enter document title"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -100,19 +113,6 @@ export const CreateDocumentForm = ({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="defaultSectionName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default Section Name (Optional)</FormLabel>
-                  <FormControl>
-                    <Input className="text-gray-300 border border-gray-500 outline-none focus:ring-0 focus:ring-orange-500" placeholder="e.g., Introduction" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <div className="flex justify-end gap-3 pt-4">
               <Button
                 className="cursor-pointer hover:bg-orange-500 border border-gray-500 hover:border-transparent"
@@ -122,7 +122,11 @@ export const CreateDocumentForm = ({
               >
                 Cancel
               </Button>
-              <Button className="cursor-pointer bg-orange-500" type="submit" disabled={isSubmitting}>
+              <Button
+                className="cursor-pointer bg-orange-500"
+                type="submit"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? "Creating..." : "Create Document"}
               </Button>
             </div>

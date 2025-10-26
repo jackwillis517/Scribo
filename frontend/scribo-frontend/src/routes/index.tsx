@@ -1,18 +1,25 @@
-import { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router'
+import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { DocumentList } from "@/components/DocumentList";
-import { CreateDocumentForm } from '@/components/CreateDocumentForm';
-import { useAuth } from '@/auth/useAuth';
+import { CreateDocumentForm } from "@/components/CreateDocumentForm";
+import { useAuth } from "@/auth/useAuth";
+import createDocument from "@/api/createDocument";
 
 const Index = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   if (!user) {
-    return <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">Welcome to Scribo</h1>
-      <p className="text-lg text-gray-600">Please log in to access your documents.</p>
-    </div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h1 className="text-3xl font-bold mb-4">Welcome to Scribo</h1>
+        <p className="text-lg text-gray-600">
+          Please log in to access your documents.
+        </p>
+      </div>
+    );
   }
 
   const handleAddDocument = () => {
@@ -22,9 +29,20 @@ const Index = () => {
   const handleCreateDocument = async (data: {
     title: string;
     description?: string;
-    defaultSectionName?: string;
   }) => {
-    console.log("Creating document with data:", data);
+    const document = {
+      user_id: user.id,
+      title: data.title,
+      description: data.description || "No description provided.",
+      length: 0,
+      num_words: 0,
+      num_sections: 1,
+    };
+
+    await createDocument(document);
+
+    // Invalidate the documents list query to trigger a refetch
+    queryClient.invalidateQueries({ queryKey: ["documents-list"] });
   };
 
   return (
@@ -37,10 +55,8 @@ const Index = () => {
       />
     </>
   );
-}
+};
 
 export const Route = createFileRoute("/")({
   component: Index,
-})
-
-
+});
