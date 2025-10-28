@@ -20,9 +20,10 @@ const Document = () => {
   });
 
   const {isLoading: isSectionsLoading, data: sections } = useQuery({
-    queryKey: ['sections-list'],
+    queryKey: ['sections-list', documentId],
     queryFn: () => getAllSectons(),
     staleTime: 30000,
+    enabled: !!documentId,
   });
 
   const formatDate = (dateString: string) => {

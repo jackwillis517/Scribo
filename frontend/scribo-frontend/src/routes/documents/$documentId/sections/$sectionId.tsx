@@ -1,39 +1,48 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Editor } from "@/components/Editor";
 import { AgentPanel } from "@/components/AgentPanel";
 import { Button } from "@/components/ui/button";
-// import { getDocumentById, getSectionById } from "@/data/mockData";
 import { ArrowLeft, PanelRightClose, PanelRightOpen, Save } from "lucide-react";
-import { useQuery } from '@tanstack/react-query';
-import getDocumentById from '@/api/getDocumentById';
-import getSectionById from '@/api/getSectionById';
+import { useQuery } from "@tanstack/react-query";
+import getDocumentById from "@/api/getDocumentById";
+import getSectionById from "@/api/getSectionById";
+import saveSection from "@/api/saveSection";
 
 const Section = () => {
-  const { documentId, sectionId } = Route.useParams()
+  const { documentId, sectionId } = Route.useParams();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const navigate = useNavigate();
 
-  const {isLoading: isDocumentLoading, data: document } = useQuery({
-    queryKey: ['document-info', documentId],
+  const { isLoading: isDocumentLoading, data: document } = useQuery({
+    queryKey: ["document-info", documentId],
     queryFn: () => getDocumentById(documentId!),
     staleTime: 30000,
     enabled: !!documentId,
   });
 
-  const {isLoading: isSectionLoading, data: section } = useQuery({
-    queryKey: ['section-info', sectionId],
+  const { isLoading: isSectionLoading, data: section } = useQuery({
+    queryKey: ["section-info", sectionId],
     queryFn: () => getSectionById(sectionId!),
     staleTime: 30000,
     enabled: !!sectionId,
   });
 
-  // const document = getDocumentById(documentId);
-  // const section = getSectionById(sectionId);
+  const handleSave = async () => {
+    const updatedSection = {
+      ...section.section,
+      content: content,
+      length: content.length,
+      num_words: content.split(/\s+/).length,
+    };
 
-  const handleSave = () => {
-    // Save popup here
+    try {
+      await saveSection(updatedSection);
+      console.log("Section saved successfully");
+    } catch (error) {
+      console.error("Failed to save section:", error);
+    }
   };
 
   if (!sectionId) {
@@ -50,7 +59,7 @@ const Section = () => {
   }
 
   if (isDocumentLoading || isSectionLoading) {
-    return <div> Loading...</div>
+    return <div> Loading...</div>;
   }
 
   return (
@@ -60,9 +69,11 @@ const Section = () => {
           {/* Header */}
           <div className="flex items-center justify-between  ">
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate({to: `/documents/${document.document.id}`})}
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  navigate({ to: `/documents/${document.document.id}` })
+                }
                 className="gap-2 cursor-pointer hover:bg-orange-500"
               >
                 <ArrowLeft className="h-4 w-4 cursor-pointer hover:bg-orange-500" />
@@ -70,11 +81,16 @@ const Section = () => {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">{section.section.title}</h1>
-                <p className="text-sm text-gray-300">{document.document.title}</p>
+                <p className="text-sm text-gray-300">
+                  {document.document.title}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={handleSave} className="gap-2 bg-orange-500 cursor-pointer">
+              <Button
+                onClick={handleSave}
+                className="gap-2 bg-orange-500 cursor-pointer"
+              >
                 <Save className="h-4 w-4" />
                 Save
               </Button>
@@ -101,9 +117,11 @@ const Section = () => {
           {/* Editor Layout */}
           <div className="flex gap-4 h-[calc(100vh-200px)]">
             {/* Main Editor */}
-            <div className={`flex-1 transition-all duration-300 ${
-              isPanelOpen ? 'mr-0' : 'mr-0'
-            }`}>
+            <div
+              className={`flex-1 transition-all duration-300 ${
+                isPanelOpen ? "mr-0" : "mr-0"
+              }`}
+            >
               <Editor
                 content={content}
                 onChange={setContent}
@@ -124,6 +142,8 @@ const Section = () => {
   );
 };
 
-export const Route = createFileRoute("/documents/$documentId/sections/$sectionId")({
+export const Route = createFileRoute(
+  "/documents/$documentId/sections/$sectionId",
+)({
   component: Section,
-})
+});

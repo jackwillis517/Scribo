@@ -1,6 +1,6 @@
-import type { Section } from "./types";
+import type { NewSection } from "./types";
 
-export default async function createSection(section: Section) {
+export default async function createSection(section: NewSection) {
   const response = await fetch(`/api/sections/createSection`, {
     method: "POST",
     headers: {

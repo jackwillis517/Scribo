@@ -5,6 +5,7 @@ import { DocumentList } from "@/components/DocumentList";
 import { CreateDocumentForm } from "@/components/CreateDocumentForm";
 import { useAuth } from "@/auth/useAuth";
 import createDocument from "@/api/createDocument";
+import createSection from "@/api/createSection";
 
 const Index = () => {
   const { user } = useAuth();
@@ -39,7 +40,21 @@ const Index = () => {
       num_sections: 1,
     };
 
-    await createDocument(document);
+    const uploadedDocument = await createDocument(document);
+
+    const document_id = uploadedDocument["document"]["id"];
+
+    const default_section = {
+      document_id: document_id,
+      title: "Default Section Name",
+      content: "Words. Really good ones. The best words.",
+      summary: "Default summary.",
+      metadata: {},
+      length: 0,
+      num_words: 0,
+    };
+
+    await createSection(default_section);
 
     // Invalidate the documents list query to trigger a refetch
     queryClient.invalidateQueries({ queryKey: ["documents-list"] });

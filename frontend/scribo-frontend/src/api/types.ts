@@ -25,11 +25,21 @@ export interface Section {
   title: string;
   content: string;
   summary: string;
-  metadata: string;
+  metadata: { [key: string]: string | undefined };
   length: number;
   num_words: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface NewSection {
+  document_id: string;
+  title: string;
+  content: string;
+  summary: string;
+  metadata: { [key: string]: string | undefined };
+  length: number;
+  num_words: number;
 }
 
 export interface AgentMessage {

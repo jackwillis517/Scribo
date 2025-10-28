@@ -1,8 +1,4 @@
-import hashlib
-from os import name
-from typing_extensions import ChainMap
-from langchain_core.prompts.chat import MessageLike
-from langgraph.checkpoint.serde.types import Update
+import json
 import psycopg
 from typing import List
 from flask_cors import CORS
@@ -15,15 +11,23 @@ from langchain_core.documents import Document
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.document_loaders import TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores.upstash import UpstashVectorStore
-from pydantic.types import SecretType
 
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origin="*")
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": "*",
+            "supports_credentials": True,
+        }
+    },
+)
 
 # ============================================================================
 # CORE COMPONENTS
@@ -75,16 +79,16 @@ def get_docs(
     for i, chunk in enumerate(chunks):
         vector_id = f"{section.id}_chunk{i}"
         docs.append(
-            {
-                "page_content": chunk,
-                "metadata": {
+            Document(
+                page_content=chunk,
+                metadata={
                     "id": vector_id,
                     "namespace": namespace,
                     "section_metadata": section.metadata,
                     "section_id": section.id,
                     "document_id": section.document_id,
                 },
-            }
+            )
         )
 
     return docs
@@ -136,7 +140,7 @@ def update_section(section: Section) -> None:
             section.title,
             section.content,
             section.summary,
-            section.metadata,
+            json.dumps(section.metadata),
             section.length,
             section.num_words,
             section.id,
@@ -258,7 +262,7 @@ def retrieve(query: str, scope: str) -> List[str]:
     def docs_to_string(docs: List[Document]) -> List[str]:
         return [doc.page_content for doc in docs]
 
-    docs = document_vectorstore.similarity_search(query=query, k=k)
+    docs = general_vectorstore.similarity_search(query=query, k=k)
 
     # if k == 5:
     #     sections = section_summary_vectorstore.similarity_search(
@@ -416,62 +420,70 @@ def handle_message(document_id: str, thread_id: str | None, message: str):
 
 
 def handle_save(section: Section) -> None:
-    # Get new section summary & metadata
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    summary_prompt = f"Summarize the following section of a document in four sentences:\n\n{section.content}"
-    new_summary = llm.invoke(summary_prompt).content.strip()
+    # Chunk, embed and upsert section
+    section_docs = get_docs(section=section)
+    print(f"Section docs chunked: {len(section_docs)}")
 
-    print(f"New summary: {new_summary}")
+    if len(section_docs) > 0:
+        print("Got here")
+        print(section_docs[0])
+        general_vectorstore.add_documents(documents=section_docs, namespace="general")
+        print("Documents embedded and upserted")
+
+    # Get new section summary, chunk, embed and upsert if the section has more than 100 words
+    if section.num_words > 100:
+        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        summary_prompt = f"Summarize the following section of a document in four sentences:\n\n{section.content}"
+        new_summary = llm.invoke(summary_prompt).content
+        print(f"New summary: {new_summary}")
+
+        # Update section on Postgres
+        section.summary = new_summary
+        print(f"Section updated: {section.id}")
+
+        summary_docs = get_docs(
+            section=section, namespace="summary", chunk_size=100, chunk_overlap=10
+        )
+        print(f"Summary docs chunked: {len(summary_docs)}")
+
+        if len(summary_docs) > 0:
+            section_summary_vectorstore.add_documents(
+                documents=summary_docs, namespace="summary"
+            )
 
     # Update section on Postgres
-    section.summary = new_summary
     update_section(section)
-
-    print(f"Section updated: {section.id}")
-
-    # Chunk section and section summary
-    section_docs = get_docs(section=section)
-    summary_docs = get_docs(
-        section=section, namespace="summary", chunk_size=100, overlap=10
-    )
-
-    print(f"Section docs chunked: {len(section_docs)}")
-    print(f"Summary docs chunked: {len(summary_docs)}")
-
-    # Embed and upsert chunked documents
-    general_vectorstore.add_documents(documents=section_docs, namespace="general")
-    section_summary_vectorstore.add_documents(
-        documents=summary_docs, namespace="summary"
-    )
-
-    print("Documents embedded and upserted")
 
 
 @app.route("/message", methods=["POST"])
 def message():
-    document_id = request.json["document_id"]
-    thread_id = request.json.get("thread_id")
-    message = request.json["message"]
+    try:
+        document_id = request.json["document_id"]
+        thread_id = request.json.get("thread_id")
+        message = request.json["message"]
 
-    # Handle user message
-    thread_id, answer = handle_message(document_id, thread_id, message)
-
-    return jsonify({"thread_id": thread_id, "answer": answer})
+        # Handle user message
+        thread_id, answer = handle_message(document_id, thread_id, message)
+        return jsonify({"thread_id": thread_id, "answer": answer})
+    except Exception as e:
+        print(e)
+        return jsonify({"status": "error", "message": str(e)})
 
 
 @app.route("/save", methods=["POST"])
 def embed():
-    section = Section(
-        title=request.json["title"],
-        content=request.json["content"],
-        summary=request.json["summary"],
-        metadata=request.json["metadata"],
-        length=request.json["length"],
-        num_words=request.json["num_words"],
-        id=request.json["id"],
-    )
-
     try:
+        section = Section(
+            title=request.json["title"],
+            document_id=request.json["document_id"],
+            content=request.json["content"],
+            summary=request.json["summary"],
+            metadata=request.json["metadata"],
+            length=request.json["length"],
+            num_words=request.json["num_words"],
+            id=request.json["id"],
+        )
+
         handle_save(section)
         return jsonify({"status": "success"})
     except Exception as e:

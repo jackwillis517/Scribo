@@ -3,20 +3,21 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
 type Section struct {
-	ID         string          `json:"id"`
-	DocumentID string          `json:"document_id"`
-	Title      string          `json:"title"`
-	Content    string          `json:"content"`
-	Summary    string          `json:"summary"`
-	Metadata   json.RawMessage `json:"metadata"`
-	Length     int             `json:"length"`
-	NumWords   int             `json:"num_words"`
-	CreatedAt  time.Time       `json:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at"`
+	ID         string           `json:"id"`
+	DocumentID string           `json:"document_id"`
+	Title      string           `json:"title"`
+	Content    string           `json:"content"`
+	Summary    string           `json:"summary"`
+	Metadata   *json.RawMessage `json:"metadata"`
+	Length     int              `json:"length"`
+	NumWords   int              `json:"num_words"`
+	CreatedAt  time.Time        `json:"created_at"`
+	UpdatedAt  time.Time        `json:"updated_at"`
 }
 
 type PostgresSectionStore struct {
@@ -116,6 +117,7 @@ func (p *PostgresSectionStore) GetAllSections(user *User) ([]*Section, error) {
 	`
 	rows, err := p.db.Query(query, user.ID)
 	if err != nil {
+		fmt.Printf("Line 120 error: %v", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -136,11 +138,13 @@ func (p *PostgresSectionStore) GetAllSections(user *User) ([]*Section, error) {
 			&section.UpdatedAt,
 		)
 		if err != nil {
+			fmt.Printf("Line 141 error: %v", err)
 			return nil, err
 		}
 		sections = append(sections, section)
 	}
 	if err := rows.Err(); err != nil {
+		fmt.Printf("Line 147 error: %v", err)
 		return nil, err
 	}
 	return sections, nil

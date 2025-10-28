@@ -51,23 +51,7 @@ func (pg *PostgresDocumentStore) CreateDocument(document *Document, user *User) 
 		return nil, err
 	}
 
-	// Every document needs to have a default section, users can use this as the whole document or as a real section
-	// which will help improve RAG accuracy
-	query = `
-		INSERT INTO sections (document_id, title)
-		VALUES ($1, $2)
-	`
-	res, err := tx.Exec(query, document.ID, "New Section")
 	if err != nil {
-		return nil, err
-	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return nil, err
-	}
-
-	if rows != 1 {
 		return nil, err
 	}
 
