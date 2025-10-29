@@ -1,4 +1,5 @@
 import json
+from chromadb.api.types import Documents
 import psycopg
 from typing import List
 from flask_cors import CORS
@@ -92,6 +93,15 @@ def get_docs(
         )
 
     return docs
+
+
+def embed_upsert_documents(
+    vectorstore: UpstashVectorStore, documents: List[Document], namespace: str
+) -> None:
+    ids = [doc.metadata["id"] for doc in documents]
+    namespace = documents[0].metadata["namespace"]
+    vectorstore.delete(ids=ids)
+    vectorstore.add_documents(ids=ids, documents=documents, namespace=namespace)
 
 
 # Database functions
@@ -425,9 +435,10 @@ def handle_save(section: Section) -> None:
     print(f"Section docs chunked: {len(section_docs)}")
 
     if len(section_docs) > 0:
-        print("Got here")
         print(section_docs[0])
-        general_vectorstore.add_documents(documents=section_docs, namespace="general")
+        embed_upsert_documents(
+            vectorstore=general_vectorstore, documents=section_docs, namespace="general"
+        )
         print("Documents embedded and upserted")
 
     # Get new section summary, chunk, embed and upsert if the section has more than 100 words
@@ -435,7 +446,7 @@ def handle_save(section: Section) -> None:
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
         summary_prompt = f"Summarize the following section of a document in four sentences:\n\n{section.content}"
         new_summary = llm.invoke(summary_prompt).content
-        print(f"New summary: {new_summary}")
+        print(f"Summary generated")
 
         # Update section on Postgres
         section.summary = new_summary
@@ -447,8 +458,10 @@ def handle_save(section: Section) -> None:
         print(f"Summary docs chunked: {len(summary_docs)}")
 
         if len(summary_docs) > 0:
-            section_summary_vectorstore.add_documents(
-                documents=summary_docs, namespace="summary"
+            embed_upsert_documents(
+                vectorstore=section_summary_vectorstore,
+                documents=summary_docs,
+                namespace="summary",
             )
 
     # Update section on Postgres
