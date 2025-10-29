@@ -44,12 +44,13 @@ func NewApplication() (*Application, error) {
 	documentStore := store.NewPostgresDocumentStore(db)
 	sectionStore := store.NewPostgresSectionStore(db)
 	noteStore := store.NewPostgresNoteStore(db)
+	agentStore := store.NewPostgresAgentStore(db)
 
 	userHandler := api.NewUserHandler(userStore, logger)
 	documentHandler := api.NewDocumentHandler(documentStore, logger)
 	sectionHandler := api.NewSectionHandler(sectionStore, logger)
 	noteHandler := api.NewNoteHandler(noteStore, logger)
-	agentHandler := api.NewAgentHandler(logger)
+	agentHandler := api.NewAgentHandler(agentStore, logger)
 	middlewareHandler := middleware.UserMiddleware{UserStore: userStore}
 
 	app := &Application{

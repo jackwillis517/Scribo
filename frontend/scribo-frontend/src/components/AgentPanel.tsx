@@ -1,61 +1,105 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, User } from "lucide-react";
+import type { AgentMessage } from "@/api/types";
+import getMessagesById from "@/api/getMessagesById";
+import agentMessage from "@/api/agentMessage";
 
-interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'agent';
-  timestamp: Date;
-}
+const DEFAULT_MESSAGE: AgentMessage = {
+  content:
+    "Hello! I'm your AI writing assistant. I can help you improve your content, suggest edits, or answer questions about this section or document.",
+  role: "assistant",
+};
 
-export const AgentPanel = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m your AI writing assistant. I can help you improve your content, suggest edits, or answer questions about your document.',
-      sender: 'agent',
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState('');
+export const AgentPanel = ({
+  documentId,
+  sectionId,
+}: {
+  documentId: string;
+  sectionId: string;
+}) => {
+  const [messages, setMessages] = useState<AgentMessage[]>([DEFAULT_MESSAGE]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        setIsLoading(true);
+        const result = await getMessagesById({
+          document_id: documentId,
+          section_id: sectionId,
+        });
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      sender: 'user',
-      timestamp: new Date()
+        if (result.messages && result.messages.length > 0) {
+          setMessages(result.messages);
+        } else {
+          setMessages([DEFAULT_MESSAGE]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+        setMessages([DEFAULT_MESSAGE]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    fetchMessages();
+  }, [documentId, sectionId]);
 
-    // Simulate agent response
-    setTimeout(() => {
-      const agentMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `I understand you said: "${input}". How can I help you improve this section?`,
-        sender: 'agent',
-        timestamp: new Date()
+  const handleSendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage: AgentMessage = {
+      content: input,
+      role: "user",
+    };
+
+    // Add user message to UI immediately
+    setMessages((prev) => {
+      // Remove default message if it's the only message
+      if (prev.length === 1 && prev[0].content === DEFAULT_MESSAGE.content) {
+        return [userMessage];
+      }
+      return [...prev, userMessage];
+    });
+    setInput("");
+
+    try {
+      // Send message to API
+      const result = await agentMessage(userMessage, documentId, sectionId);
+
+      // Add assistant response to UI
+      const assistantMessage: AgentMessage = {
+        content: result.response.content,
+        role: "assistant",
+        thread_id: result.response.thread_id,
       };
-      setMessages(prev => [...prev, agentMessage]);
-    }, 1000);
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // Add error message to UI
+      const errorMessage: AgentMessage = {
+        content: "Sorry, I couldn't process your message. Please try again.",
+        role: "assistant",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   return (
-    <div className={`flex flex-col h-full bg-neutral-800 border border-gray-500`}>
+    <div
+      className={`flex flex-col h-full bg-neutral-800 border border-gray-500`}
+    >
       <div className="p-4">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg ">
@@ -70,34 +114,38 @@ export const AgentPanel = () => {
 
       <ScrollArea className="flex-1 p-4 border-t border-gray-500">
         <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${
-                message.sender === 'user' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              {message.sender === 'agent' && (
-                <div className="p-1.5 rounded-full h-8 w-8 flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-4 w-4 text-orange-500" />
-                </div>
-              )}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <p className="text-gray-400">Loading messages...</p>
+            </div>
+          ) : (
+            messages.map((message, index) => (
               <div
-                className={`max-w-[80%] rounded-lg p-3 text-sm ${
-                  message.sender === 'user'
-                    ? 'bg-blue'
-                    : 'bg-gray-500'
+                key={index}
+                className={`flex gap-3 ${
+                  message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                {message.content}
-              </div>
-              {message.sender === 'user' && (
-                <div className="p-1.5 rounded-full bg-secondary h-8 w-8 flex items-center justify-center flex-shrink-0">
-                  <User className="h-4 w-4 text-white" />
+                {message.role === "assistant" && (
+                  <div className="p-1.5 rounded-full h-8 w-8 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-orange-500" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-lg p-3 text-sm ${
+                    message.role === "user" ? "bg-blue" : "bg-gray-500"
+                  }`}
+                >
+                  {message.content}
                 </div>
-              )}
-            </div>
-          ))}
+                {message.role === "user" && (
+                  <div className="p-1.5 rounded-full bg-secondary h-8 w-8 flex items-center justify-center flex-shrink-0">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </ScrollArea>
 
@@ -110,7 +158,7 @@ export const AgentPanel = () => {
             placeholder="Ask a question or request help..."
             className="flex-1 border border-gray-500 text-white focus:ring-0 focus:border-orange-500"
           />
-          <Button 
+          <Button
             onClick={handleSendMessage}
             size="sm"
             className="px-3 bg-orange-500"

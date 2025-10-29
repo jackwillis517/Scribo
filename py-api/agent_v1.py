@@ -1,5 +1,4 @@
 import json
-from chromadb.api.types import Documents
 import psycopg
 from typing import List
 from flask_cors import CORS
@@ -68,11 +67,23 @@ class Section(BaseModel):
 def get_docs(
     section: Section,
     namespace: str = "section",
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200,
+    chunk_size: int = 500,
+    chunk_overlap: int = 100,
 ) -> List[Document]:
+    """
+    Chunks section content for embedding.
+
+    Optimal chunk sizes:
+    - General content: 500 chars (~75-100 words) for precise retrieval
+    - Summaries: 300 chars (~50 words) to keep summary context together
+
+    Overlap: 20-25% to maintain context across chunk boundaries
+    """
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", ". ", " ", ""],  # Prioritize semantic breaks
+        length_function=len,
     )
     chunks = splitter.split_text(section.content)
 
@@ -105,14 +116,14 @@ def embed_upsert_documents(
 
 
 # Database functions
-def create_conversation(document_id: str) -> str:
+def create_conversation(document_id: str, section_id: str) -> str:
     db_cursor.execute(
         """
-        INSERT INTO conversations (document_id)
-        VALUES (%s)
+        INSERT INTO conversations (document_id, section_id)
+        VALUES (%s, %s)
         RETURNING thread_id
     """,
-        (document_id,),
+        (document_id, section_id),
     )
     thread_id = db_cursor.fetchone()[0]
     db_conn.commit()
@@ -165,149 +176,194 @@ def update_section(section: Section) -> None:
 
 
 @tool(
-    description="Classifies user intent, the scope of the request, and if document context is needed"
+    description="Determines if the user is asking a question about their book. Returns 'yes' or 'no' and the scope."
 )
 def query_router(query: str) -> str:
     """
-    LLM Call: "What is the user trying to do?"
+    Checks if this is a question about the book content that needs retrieval.
 
-    Returns:
-    {
-        intent: "edit" | "question" | "generate" | "summarize",
-        scope: "section" | "document" | "global",
-    }
+    Returns a simple format:
+    - If question about book: "QUESTION - scope: document" or "QUESTION - scope: section"
+    - If edit/generation/other: "NOT_QUESTION"
     """
     print("query_router called\n")
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
-    # structured_llm = llm.with_structured_output(schema=QueryRouterOutput)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-    routing_prompt = """You are a query classifier for a writing assistant.
-    Analyze the user's query and return a JSON object with the following fields:
-    - intent: one of ["edit", "question", "generate", "summarize"]
-    - scope: one of ["section", "document", "global"]
+    routing_prompt = """Is the user asking a question about their book/document content that requires looking up information?
 
-    Intent definitions:
-    - edit: User wants to modify existing text
-    - question: User asks a question about content
-    - generate: User wants new content created
-    - summarize: User wants a summary of content
+Examples of QUESTIONS:
+- "What color are the sleeping bags?"
+- "Who is the main character?"
+- "What happened in chapter 3?"
 
-    Scope definitions:
-    - section: Query targets a specific section
-    - document: Query targets the entire document
-    - global: Query is about general knowledge or writing advice
+Examples of NOT QUESTIONS:
+- "Edit this paragraph..."
+- "Make this more concise"
+- "Write a new scene about..."
 
-    User query: {query}
+If it's a QUESTION, determine scope:
+- "section" if asking about the current section
+- "document" if asking about the whole book
 
-    """
+User query: {query}
 
-    # response = structured_llm.invoke(routing_prompt.format(query=query))
+Respond with EXACTLY one of these formats:
+- "QUESTION - scope: document"
+- "QUESTION - scope: section"
+- "NOT_QUESTION"
+
+Response:"""
 
     response = llm.invoke(routing_prompt.format(query=query))
-    # result = json.loads(response)
+    result = response.content.strip()
+    print(f"Query router result: {result}")
 
-    return str(response.content)
+    return result
 
 
-@tool(description="Optimizes and decomposes queries for better retrieval")
-def query_optimizer(query: str, scope: str) -> str:
+@tool(description="Rewrites user query to be more specific for searching. Only use if query_router said QUESTION.")
+def query_optimizer(query: str) -> str:
     """
-    LLM Call: "Rewrite this query to be more specific"
+    Rewrites the query to be more specific and search-friendly.
 
-    Returns:
-    {
-        optimized_query: "clearer version",
-        sub_queries: ["query1", "query2"],
-        entities: ["Alice", "Chapter 3"],
-        filters: {chapter: 3, character: "Alice"}
-    }
+    Args:
+        query: The original user question
+
+    Returns: The optimized search query as a simple string
     """
     print("query_optimizer called\n")
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
-    # structured_llm = llm.with_structured_output(schema=QueryOptimizedOutput)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-    optimization_prompt = """You are a query optimizer for a writing assistant.
-    Given the user's query and the scope, rewrite the query to be more specific
-    and decompose it into sub-queries if needed. Also extract any entities and
-    suggest filters for retrieval.
+    optimization_prompt = """Rewrite this question to be more specific and clear for semantic search. Keep it as a natural question.
 
-    Scope definitions:
-    - section: Query targets a specific section
-    - document: Query targets the entire document
-    - global: Query is about general knowledge or writing advice
+Examples:
+- Original: "What color are Rachel and Kate's sleeping bags?"
+- Optimized: "What color are the sleeping bags that Rachel and Kate have?"
 
-    User query: {query}
-    Scope: {scope}
+- Original: "Where did they go?"
+- Optimized: "Where did the characters travel to or what location did they visit?"
 
-    Return a JSON object with:
-    - optimized_query: a clearer version of the query
-    - sub_queries: a list of sub-queries if decomposition is needed, else empty list
-    - entities: a list of key entities mentioned in the query
-    - filters: a dictionary of suggested filters for retrieval
+Now optimize this query: {query}
 
-    Return ONLY a valid JSON object."""
+Optimized query:"""
 
-    # response = structured_llm.invoke(
-    #     optimization_prompt.format(query=query, scope=scope)
-    # )
+    response = llm.invoke(optimization_prompt.format(query=query))
+    result = response.content.strip()
+    print(f"Query optimizer result: {result}")
 
-    response = llm.invoke(optimization_prompt.format(query=query, scope=scope))
-    # result = json.loads(response.content)
-
-    return str(response.content)
+    return result
 
 
 @tool(
-    description="Retrieves relevant document and section summary chunks based on query and scope"
+    description="Searches the document using semantic similarity. Returns relevant text chunks from the book/document. Use 'section' scope for current section, 'document' for entire book."
 )
-def retrieve(query: str, scope: str) -> List[str]:
-    print("retrieve called\n")
+def retrieve(query: str, scope: str, document_id: str, section_id: str) -> List[str]:
+    """
+    Performs semantic search across document content.
+
+    Args:
+        query: Optimized search query (use query_optimizer first)
+        scope: "section" (current section only) or "document" (entire book)
+        document_id: UUID of the document
+        section_id: UUID of the current section
+
+    Returns:
+        List of relevant text chunks from the document
+    """
+    print(f"retrieve called with scope={scope}, doc={document_id}, section={section_id}\n")
+
+    # Build metadata filters
+    filters = {"document_id": document_id}
     if scope == "section":
-        k = 3
-    elif scope == "document" or scope == "global":
-        k = 5
+        filters["section_id"] = section_id
 
-    k = k or 4
+    # Determine search strategy based on scope
+    if scope == "section":
+        # Search detailed chunks within this section only
+        k_general = 3
+        k_summary = 0
+    elif scope == "document":
+        # Search summaries first for broad context, then detailed chunks
+        k_general = 4
+        k_summary = 2
+    else:  # global
+        # No filtering, broader search
+        k_general = 5
+        k_summary = 0
+        filters = {}
 
-    def docs_to_string(docs: List[Document]) -> List[str]:
-        return [doc.page_content for doc in docs]
+    results = []
 
-    docs = general_vectorstore.similarity_search(query=query, k=k)
+    # Search section summaries for high-level context (document scope only)
+    if k_summary > 0:
+        print(f"Searching summary namespace with filters: {filters}")
+        summary_docs = section_summary_vectorstore.similarity_search(
+            query=query, k=k_summary, filter=filters
+        )
+        results.extend([doc.page_content for doc in summary_docs])
+        print(f"Found {len(summary_docs)} summary chunks")
 
-    # if k == 5:
-    #     sections = section_summary_vectorstore.similarity_search(
-    #         query=query, k=3, filters=filters
-    #     )
-    #     docs = sections + docs
+    # Search detailed content chunks
+    print(f"Searching general namespace with filters: {filters}")
+    general_docs = general_vectorstore.similarity_search(
+        query=query, k=k_general, filter=filters
+    )
+    results.extend([doc.page_content for doc in general_docs])
+    print(f"Found {len(general_docs)} general chunks")
 
-    return docs_to_string(docs)
+    print(f"Total retrieved: {len(results)} chunks")
+    return results
 
 
-@tool(description="Calls an llm based on a query and a temperature.")
+@tool(description="Generates new creative content. Temperature: 0.7-0.9 for creative writing, 0.3-0.5 for factual content, 0.0-0.2 for precise edits.")
 def generate(query: str, temp: float) -> str:
-    print("generate called\n")
+    """
+    Generates text using an LLM.
+
+    Args:
+        query: The generation prompt/instruction
+        temp: Creativity level (0.0=deterministic, 1.0=very creative)
+            - 0.0-0.2: Precise, factual, minimal variation
+            - 0.3-0.5: Balanced, some creativity
+            - 0.6-0.9: Creative, varied, good for fiction
+            - 1.0+: Maximum randomness
+
+    Returns:
+        Generated text based on the query
+    """
+    print(f"generate called with temp={temp}\n")
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=temp)
     response = llm.invoke(query)
     return str(response.content)
 
 
-@tool(description="Summarizes input text")
+@tool(description="Creates a concise summary of provided text. Use for condensing sections or long content.")
 def summarize(text: str) -> str:
-    print("summarize called\n")
-    summarize_prompt = """You are a helpful assistant that specializes in summarizing text.
-
-    Your task is to read the provided text and generate a concise, accurate summary that captures the main ideas and important details.
-    - Focus on clarity and brevity.
-    - Do not include personal opinions or information not present in the original text.
-    - If the text is technical or complex, simplify it while preserving the core meaning.
-    - If the text is a narrative, capture the key events and themes.
-
-    Return only the summary, without any additional commentary or formatting.
-
-    {text}
     """
+    Summarizes text while preserving key information.
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    Args:
+        text: The text to summarize (can be long)
+
+    Returns:
+        A concise summary capturing main ideas and important details
+    """
+    print("summarize called\n")
+    summarize_prompt = """Summarize the following text concisely while preserving all key information.
+
+Guidelines:
+- Capture main ideas, key events, and important details
+- For narratives: Include plot points, character actions, and outcomes
+- For technical text: Preserve core concepts and conclusions
+- Be clear and brief
+- Do not add opinions or information not in the original text
+
+Text to summarize:
+{text}
+
+Summary:"""
+
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
     response = llm.invoke(summarize_prompt.format(text=text))
 
     return str(response.content)
@@ -350,49 +406,35 @@ tools = [
     store_ltm,
     recall_ltm,
 ]
-prompt = """
-You are a Writing Assistant AI equipped with specialized tools to help users with writing, answering questions, and managing memory. You can reason through multi-step tasks and use your tools in sequence to solve complex queries.
+prompt = """You are an AI Writing Assistant for authors. You help with editing and answering questions about their manuscript.
 
-Your main functions and available tools are:
+## WORKFLOW FOR QUESTIONS
 
-1. **Editing Writing:** Focus on grammar, clarity, conciseness, and readability. For creative text (fiction, storytelling, dialogue), you may make light creative improvements while preserving tone and meaning.
-    - Please add details from the book using the `retrieve` tool if necessary
-    - Verify specific details from the rest of the book when you are asked using the `retrieve` tool
+If the user asks a question about their book:
 
-2. **Answering Questions About Written Content (RAG):**
-   - To answer questions factually, use the Retrieval-Augmented Generation (RAG) workflow:
-     - First, use the `query_router` tool to classify the user's intent, scope, and whether document context is needed.
-     - Next, use the `query_optimizer` tool to rewrite the query for specificity, decompose it, extract entities, and suggest filters.
-     - Then, use the `retrieve` tool with the optimized query, scope, and filters to fetch relevant document or section chunks.
-     - Use the retrieved content to answer the user's question. If the content does not support an answer, respond with "I don’t know." Never invent information.
+1. Call `query_router(user_query)` once
+   - If result contains "QUESTION", continue to step 2
+   - If result is "NOT_QUESTION", just answer directly
 
-3. **Content Generation:** Use the `generate` tool to create new content or responses based on a query and a specified creativity level (temperature).
+2. Call `query_optimizer(user_query)` once to get a better search query
 
-4. **Summarization:** Use the `summarize` tool to produce concise, accurate summaries of provided text.
+3. Call `retrieve(optimized_query, scope, document_id, section_id)` once
+   - Use the optimized query from step 2
+   - Extract scope from query_router result (either "document" or "section")
+   - Get document_id and section_id from the [CONTEXT] line (format: document_id="...", section_id="...")
 
-5. **Long-Term Memory:**
-   - Use the `store_ltm` tool to save important user details or memories into long-term memory.
-   - Use the `recall_ltm` tool to fetch relevant memories for a user and conversation thread.
+4. Answer using ONLY the text from retrieve. If the answer isn't there, say "I don't have that information."
 
-**General Rules:**
-- You may need to use multiple tools in sequence to answer a query or solve a task.
-- Always call query_router before using other tools.
-- All responses must pertain to the writing, content, or memory context.
-- Maintain accuracy and helpfulness.
-- If you editing a scene and think adding something from the book would help, generate a prompt for the retrieval tool.
-- If a request is unclear, ask clarifying questions instead of guessing.
-- Never invent information.
-- End each conversation by asking: "Anything else I can help with?"
+## FOR EDITING AND OTHER TASKS
 
-**Available tools:**
-- `query_router`
-- `query_optimizer`
-- `retrieve`
-- `generate`
-- `summarize`
-- `store_ltm`
-- `recall_ltm`
-"""
+- **Editing text**: Just provide improvements directly. You can use retrieve if you need context from other parts.
+- **Writing new content**: Use `generate(prompt, temperature)`
+- **Summarizing**: Use `summarize(text)`
+
+## RULES
+- Call each tool only ONCE per workflow
+- Never make up information about the book
+- Be concise and helpful"""
 
 
 def create_prompt(state):
@@ -410,19 +452,24 @@ def create_agent():
 # ============================================================================
 
 
-def handle_message(document_id: str, thread_id: str | None, message: str):
+def handle_message(
+    document_id: str, section_id: str, thread_id: str | None, content: str
+):
     if thread_id is None:
-        thread_id = create_conversation(document_id)
-    add_message(document_id, thread_id, "user", message)
+        thread_id = create_conversation(document_id, section_id)
+    add_message(document_id, thread_id, "user", content)
+
+    # Inject document and section context into the user message
+    # so the agent can pass them to the retrieve tool
+    context_aware_content = f"""[CONTEXT: document_id="{document_id}", section_id="{section_id}"]
+
+User query: {content}"""
 
     agent = create_agent()
-    inputs = {"messages": [("user", message)]}
+    inputs = {"messages": [("user", context_aware_content)]}
     response = agent.invoke(
         input=inputs, config={"configurable": {"thread_id": thread_id}}
     )
-    # for message in response["messages"]:
-    #     print(message)
-    #     print("|=========================|")
 
     add_message(document_id, thread_id, "assistant", response["messages"][-1].content)
 
@@ -453,7 +500,7 @@ def handle_save(section: Section) -> None:
         print(f"Section updated: {section.id}")
 
         summary_docs = get_docs(
-            section=section, namespace="summary", chunk_size=100, chunk_overlap=10
+            section=section, namespace="summary", chunk_size=300, chunk_overlap=50
         )
         print(f"Summary docs chunked: {len(summary_docs)}")
 
@@ -471,16 +518,39 @@ def handle_save(section: Section) -> None:
 @app.route("/message", methods=["POST"])
 def message():
     try:
+        print("=== /message endpoint called ===")
+        print(f"Request JSON: {request.json}")
+
         document_id = request.json["document_id"]
+        print(f"document_id: {document_id}")
+
+        section_id = request.json["section_id"]
+        print(f"section_id: {section_id}")
+
         thread_id = request.json.get("thread_id")
-        message = request.json["message"]
+        print(f"thread_id: {thread_id}")
+
+        content = request.json["content"]
+        print(f"content: {content}")
 
         # Handle user message
-        thread_id, answer = handle_message(document_id, thread_id, message)
-        return jsonify({"thread_id": thread_id, "answer": answer})
+        thread_id, content = handle_message(document_id, section_id, thread_id, content)
+
+        response_data = {
+            "document_id": document_id,
+            "thread_id": thread_id,
+            "role": "assistant",
+            "content": content,
+        }
+        print(f"Response: {response_data}")
+
+        return jsonify(response_data)
     except Exception as e:
-        print(e)
-        return jsonify({"status": "error", "message": str(e)})
+        print(f"ERROR in /message endpoint: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/save", methods=["POST"])

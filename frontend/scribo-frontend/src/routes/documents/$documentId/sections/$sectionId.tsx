@@ -132,7 +132,7 @@ const Section = () => {
             {/* Collapsible Agent Panel */}
             {isPanelOpen && (
               <div className="w-80 border rounded border-gray-500 shadow-soft transition-all duration-300">
-                <AgentPanel />
+                <AgentPanel documentId={documentId} sectionId={sectionId} />
               </div>
             )}
           </div>

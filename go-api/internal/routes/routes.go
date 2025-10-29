@@ -27,6 +27,7 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 		r.Get("/sections/getAllSections", app.SectionHandler.HandleGetAllSections)
 
 		r.Post("/agent/message", app.AgentHandler.HandleAgentMessage)
+		r.Post("/agent/getMessagesById", app.AgentHandler.HandleGetMessagesById)
 
 		// /notes/...
 	})

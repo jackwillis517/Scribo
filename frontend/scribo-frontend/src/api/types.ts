@@ -43,7 +43,12 @@ export interface NewSection {
 }
 
 export interface AgentMessage {
-  document_id: string;
-  message: string;
+  role: "user" | "assistant";
+  content: string;
   thread_id?: string;
+}
+
+export interface MessageRequest {
+  document_id: string;
+  section_id: string;
 }
