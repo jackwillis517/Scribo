@@ -5,3 +5,31 @@ html,
 body {
   @apply bg-neutral-900;
 }
+
+/* Remove white border from Tiptap editor on focus */
+.ProseMirror {
+  outline: none !important;
+}
+
+.ProseMirror:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Custom scrollbar styles */
+.editor-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.editor-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-scroll::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 5px;
+}
+
+.editor-scroll::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}

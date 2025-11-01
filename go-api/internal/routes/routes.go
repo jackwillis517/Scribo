@@ -24,9 +24,10 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 		r.Post("/sections/readSection", app.SectionHandler.HandleReadSection)
 		r.Put("/sections/updateSection", app.SectionHandler.HandleUpdateSection)
 		r.Delete("/sections/deleteSection/{id}", app.SectionHandler.HandleDeleteSection)
-		r.Get("/sections/getAllSections", app.SectionHandler.HandleGetAllSections)
+		r.Post("/sections/getSectionsForDocument", app.SectionHandler.HandleGetSectionsForDocument)
 
 		r.Post("/agent/message", app.AgentHandler.HandleAgentMessage)
+		r.Post("/agent/saveSection", app.AgentHandler.HandleSaveSection)
 		r.Post("/agent/getMessagesById", app.AgentHandler.HandleGetMessagesById)
 
 		// /notes/...

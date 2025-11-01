@@ -66,7 +66,7 @@ class Section(BaseModel):
 # Helper functions
 def get_docs(
     section: Section,
-    namespace: str = "section",
+    namespace: str,
     chunk_size: int = 500,
     chunk_overlap: int = 100,
 ) -> List[Document]:
@@ -221,7 +221,9 @@ Response:"""
     return result
 
 
-@tool(description="Rewrites user query to be more specific for searching. Only use if query_router said QUESTION.")
+@tool(
+    description="Rewrites user query to be more specific for searching. Only use if query_router said QUESTION."
+)
 def query_optimizer(query: str) -> str:
     """
     Rewrites the query to be more specific and search-friendly.
@@ -270,52 +272,51 @@ def retrieve(query: str, scope: str, document_id: str, section_id: str) -> List[
     Returns:
         List of relevant text chunks from the document
     """
-    print(f"retrieve called with scope={scope}, doc={document_id}, section={section_id}\n")
+    print(
+        f"retrieve called with scope={scope}, doc={document_id}, section={section_id}\n"
+    )
 
-    # Build metadata filters
-    filters = {"document_id": document_id}
-    if scope == "section":
-        filters["section_id"] = section_id
+    # Build metadata filters for Upstash
+    # Upstash uses string-based filter expressions, not dictionaries
+    filter_expr = f"document_id = '{document_id}' AND section_id = '{section_id}'"
 
-    # Determine search strategy based on scope
-    if scope == "section":
-        # Search detailed chunks within this section only
-        k_general = 3
-        k_summary = 0
-    elif scope == "document":
-        # Search summaries first for broad context, then detailed chunks
-        k_general = 4
-        k_summary = 2
-    else:  # global
-        # No filtering, broader search
+    if scope == "document":
+        k_general = 10
+        k_summary = 3
+    elif scope == "section":
         k_general = 5
-        k_summary = 0
-        filters = {}
+        k_summary = 1
 
     results = []
 
     # Search section summaries for high-level context (document scope only)
-    if k_summary > 0:
-        print(f"Searching summary namespace with filters: {filters}")
-        summary_docs = section_summary_vectorstore.similarity_search(
-            query=query, k=k_summary, filter=filters
-        )
-        results.extend([doc.page_content for doc in summary_docs])
-        print(f"Found {len(summary_docs)} summary chunks")
-
-    # Search detailed content chunks
-    print(f"Searching general namespace with filters: {filters}")
-    general_docs = general_vectorstore.similarity_search(
-        query=query, k=k_general, filter=filters
+    print("Searching summary namespace")
+    summary_docs = section_summary_vectorstore.similarity_search(
+        query=query, k=k_summary, filter=filter_expr
     )
-    results.extend([doc.page_content for doc in general_docs])
-    print(f"Found {len(general_docs)} general chunks")
+    results.extend([doc.page_content for doc in summary_docs])
+    print(f"Found {len(summary_docs)} summary chunks")
+
+    # Search detailed content chunks (always executed)
+    print(f"Searching general vectorstore with filter: {filter_expr}")
+    try:
+        general_docs = general_vectorstore.similarity_search(
+            query=query, k=k_general, filter=filter_expr
+        )
+        results.extend([doc.page_content for doc in general_docs])
+        print(f"Found {len(general_docs)} general chunks")
+    except Exception as e:
+        print(f"Error searching general namespace: {e}")
+        general_docs = []
 
     print(f"Total retrieved: {len(results)} chunks")
+    print("|==============================================|")
     return results
 
 
-@tool(description="Generates new creative content. Temperature: 0.7-0.9 for creative writing, 0.3-0.5 for factual content, 0.0-0.2 for precise edits.")
+@tool(
+    description="Generates new creative content. Temperature: 0.7-0.9 for creative writing, 0.3-0.5 for factual content, 0.0-0.2 for precise edits."
+)
 def generate(query: str, temp: float) -> str:
     """
     Generates text using an LLM.
@@ -337,7 +338,9 @@ def generate(query: str, temp: float) -> str:
     return str(response.content)
 
 
-@tool(description="Creates a concise summary of provided text. Use for condensing sections or long content.")
+@tool(
+    description="Creates a concise summary of provided text. Use for condensing sections or long content."
+)
 def summarize(text: str) -> str:
     """
     Summarizes text while preserving key information.
@@ -478,7 +481,7 @@ User query: {content}"""
 
 def handle_save(section: Section) -> None:
     # Chunk, embed and upsert section
-    section_docs = get_docs(section=section)
+    section_docs = get_docs(section=section, namespace="general")
     print(f"Section docs chunked: {len(section_docs)}")
 
     if len(section_docs) > 0:

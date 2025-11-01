@@ -29,9 +29,9 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
   }
 
   return (
-    <div className="border rounded bg-card border-gray-500">
+    <div className="border rounded bg-card border-gray-500 h-full flex flex-col">
       {/* Toolbar */}
-      <div className="border-b p-2 flex items-center gap-1 flex-wrap border-gray-500 bg-neutral-800">
+      <div className="border-b p-2 flex items-center gap-1 flex-wrap border-gray-500 bg-neutral-800 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
@@ -95,10 +95,12 @@ export const Editor = ({ content, onChange, placeholder = "Start writing..." }: 
       </div>
 
       {/* Editor Content */}
-      <EditorContent 
-        editor={editor} 
-        className="prose prose-sm max-w-none p-4 min-h-[400px] focus-within:outline-none bg-neutral-800"
-      />
+      <div className="flex-1 overflow-y-auto min-h-0 editor-scroll">
+        <EditorContent
+          editor={editor}
+          className="prose prose-sm max-w-none p-4 focus-within:outline-none bg-neutral-800 h-full"
+        />
+      </div>
     </div>
   );
 };

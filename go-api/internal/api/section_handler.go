@@ -126,16 +126,24 @@ func (sh *SectionHandler) HandleDeleteSection(w http.ResponseWriter, r *http.Req
 	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"result": "section deleted"})
 }
 
-func (sh *SectionHandler) HandleGetAllSections(w http.ResponseWriter, r *http.Request) {
+func (sh *SectionHandler) HandleGetSectionsForDocument(w http.ResponseWriter, r *http.Request) {
 	currentUser := middleware.GetUser(r)
 	if currentUser == nil {
 		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "you must be logged in"})
 		return
 	}
 
-	sections, err := sh.sectionStore.GetAllSections(currentUser)
+	var documentId DocumentId
+	err := json.NewDecoder(r.Body).Decode(&documentId)
 	if err != nil {
-		sh.logger.Printf("ERROR: getAllSections: %v", err)
+		sh.logger.Printf("ERROR: decodingGetSectionsForDocument: %v", err)
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "internal request error"})
+		return
+	}
+
+	sections, err := sh.sectionStore.GetSectionsForDocument(currentUser, documentId.DocumentId)
+	if err != nil {
+		sh.logger.Printf("ERROR: getSectionsForDocument: %v", err)
 		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "failed to get all sections"})
 		return
 	}

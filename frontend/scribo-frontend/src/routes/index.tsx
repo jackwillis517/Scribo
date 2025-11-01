@@ -40,9 +40,8 @@ const Index = () => {
       num_sections: 1,
     };
 
-    const uploadedDocument = await createDocument(document);
-
-    const document_id = uploadedDocument["document"]["id"];
+    const new_document = await createDocument(document);
+    const document_id = new_document["document"]["id"];
 
     const default_section = {
       document_id: document_id,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,6 +23,8 @@ export const AgentPanel = ({
   const [messages, setMessages] = useState<AgentMessage[]>([DEFAULT_MESSAGE]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [threadId, setThreadId] = useState<string | undefined>(undefined);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -35,6 +37,11 @@ export const AgentPanel = ({
 
         if (result.messages && result.messages.length > 0) {
           setMessages(result.messages);
+          setThreadId(
+            result.messages[0].thread_id
+              ? result.messages[0].thread_id
+              : undefined,
+          );
         } else {
           setMessages([DEFAULT_MESSAGE]);
         }
@@ -49,12 +56,29 @@ export const AgentPanel = ({
     fetchMessages();
   }, [documentId, sectionId]);
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (scrollAreaRef.current) {
+        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (scrollContainer) {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }
+      }
+    };
+
+    // Use setTimeout to ensure DOM has updated
+    const timer = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timer);
+  }, [messages]);
+
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
     const userMessage: AgentMessage = {
       content: input,
       role: "user",
+      thread_id: threadId ? threadId : undefined,
     };
 
     // Add user message to UI immediately
@@ -77,6 +101,7 @@ export const AgentPanel = ({
         role: "assistant",
         thread_id: result.response.thread_id,
       };
+      setThreadId(result.response.thread_id || undefined);
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -100,7 +125,7 @@ export const AgentPanel = ({
     <div
       className={`flex flex-col h-full bg-neutral-800 border border-gray-500`}
     >
-      <div className="p-4">
+      <div className="p-4 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg ">
             <Bot className="h-4 w-4 text-orange-500" />
@@ -112,7 +137,8 @@ export const AgentPanel = ({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4 border-t border-gray-500">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 border-t border-gray-500">
+        <div className="p-4">
         <div className="space-y-4">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -147,16 +173,17 @@ export const AgentPanel = ({
             ))
           )}
         </div>
+        </div>
       </ScrollArea>
 
-      <div className="p-4 border-t border-gray-500">
+      <div className="p-4 border-t border-gray-500 flex-shrink-0">
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Ask a question or request help..."
-            className="flex-1 border border-gray-500 text-white focus:ring-0 focus:border-orange-500"
+            className="flex-1 border border-gray-500 text-white focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-orange-500"
           />
           <Button
             onClick={handleSendMessage}

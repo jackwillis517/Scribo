@@ -1,7 +1,7 @@
 import type { Section } from "./types";
 
 export default async function saveSection(section: Section) {
-  const response = await fetch(`http://localhost:5001/save`, {
+  const response = await fetch(`/api/agent/saveSection`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

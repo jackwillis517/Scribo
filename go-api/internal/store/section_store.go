@@ -33,7 +33,7 @@ type SectionStore interface {
 	ReadSection(string) (*Section, error)
 	UpdateSection(*Section) (*Section, error)
 	DeleteSection(string) error
-	GetAllSections(*User) ([]*Section, error)
+	GetSectionsForDocument(*User, string) ([]*Section, error)
 }
 
 func (p *PostgresSectionStore) CreateSection(section *Section) (*Section, error) {
@@ -107,15 +107,15 @@ func (p *PostgresSectionStore) DeleteSection(sectionId string) error {
 	return nil
 }
 
-func (p *PostgresSectionStore) GetAllSections(user *User) ([]*Section, error) {
+func (p *PostgresSectionStore) GetSectionsForDocument(user *User, documentId string) ([]*Section, error) {
 	query := `
 		SELECT s.id, s.document_id, s.title, s.content, s.summary, s.metadata, s.length, s.num_words, s.created_at, s.updated_at
 		FROM sections s
 		INNER JOIN documents d ON s.document_id = d.id
-		WHERE d.user_id = $1
+		WHERE d.user_id = $1 AND s.document_id = $2
 		ORDER BY s.created_at DESC
 	`
-	rows, err := p.db.Query(query, user.ID)
+	rows, err := p.db.Query(query, user.ID, documentId)
 	if err != nil {
 		fmt.Printf("Line 120 error: %v", err)
 		return nil, err

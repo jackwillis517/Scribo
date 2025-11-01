@@ -37,12 +37,12 @@ func (ah *AgentHandler) HandleAgentMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ah.logger.Printf("=== Received AgentMessage ===")
-	ah.logger.Printf("DocumentID: %s", req.DocumentID)
-	ah.logger.Printf("SectionID: %s", req.SectionID)
-	ah.logger.Printf("ThreadID: %v", req.ThreadID)
-	ah.logger.Printf("Role: %s", req.Role)
-	ah.logger.Printf("Content: %s", req.Content)
+	// ah.logger.Printf("=== Received AgentMessage ===")
+	// ah.logger.Printf("DocumentID: %s", req.DocumentID)
+	// ah.logger.Printf("SectionID: %s", req.SectionID)
+	// ah.logger.Printf("ThreadID: %v", req.ThreadID)
+	// ah.logger.Printf("Role: %s", req.Role)
+	// ah.logger.Printf("Content: %s", req.Content)
 
 	currentUser := middleware.GetUser(r)
 	if currentUser == nil {
@@ -56,8 +56,8 @@ func (ah *AgentHandler) HandleAgentMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ah.logger.Printf("=== Sending to Flask ===")
-	ah.logger.Printf("Payload: %s", string(payload))
+	// ah.logger.Printf("=== Sending to Flask ===")
+	// ah.logger.Printf("Payload: %s", string(payload))
 
 	flaskResp, err := http.Post("http://localhost:5001/message", "application/json", bytes.NewBuffer(payload))
 	if err != nil {
@@ -73,6 +73,47 @@ func (ah *AgentHandler) HandleAgentMessage(w http.ResponseWriter, r *http.Reques
 	}
 
 	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"response": flaskResult})
+}
+
+func (ah *AgentHandler) HandleSaveSection(w http.ResponseWriter, r *http.Request) {
+	var req store.Section
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		ah.logger.Printf("ERROR: decodingSaveSection: %v", err)
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "internal request error"})
+		return
+	}
+
+	// ah.logger.Printf("=== Received SaveSection ===")
+	// ah.logger.Printf("DocumentID: %s", req.DocumentID)
+	// ah.logger.Printf("Title: %s", req.Title)
+
+	currentUser := middleware.GetUser(r)
+	if currentUser == nil {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "you must be logged in"})
+		return
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"error": "marshal error"})
+		return
+	}
+
+	flaskResp, err := http.Post("http://localhost:5001/save", "application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		utils.WriteJSON(w, http.StatusCreated, utils.Envelope{"error": "flask api request failed"})
+		return
+	}
+	defer flaskResp.Body.Close()
+
+	var flaskResult = map[string]any{}
+	if err := json.NewDecoder(flaskResp.Body).Decode(&flaskResult); err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "flask response decode error"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"statue": "success"})
 }
 
 func (ah *AgentHandler) HandleGetMessagesById(w http.ResponseWriter, r *http.Request) {

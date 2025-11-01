@@ -118,7 +118,7 @@ const Section = () => {
           <div className="flex gap-4 h-[calc(100vh-200px)]">
             {/* Main Editor */}
             <div
-              className={`flex-1 transition-all duration-300 ${
+              className={`flex-1 h-full transition-all duration-300 ${
                 isPanelOpen ? "mr-0" : "mr-0"
               }`}
             >
@@ -131,7 +131,7 @@ const Section = () => {
 
             {/* Collapsible Agent Panel */}
             {isPanelOpen && (
-              <div className="w-80 border rounded border-gray-500 shadow-soft transition-all duration-300">
+              <div className="w-80 h-full border rounded border-gray-500 shadow-soft transition-all duration-300">
                 <AgentPanel documentId={documentId} sectionId={sectionId} />
               </div>
             )}
