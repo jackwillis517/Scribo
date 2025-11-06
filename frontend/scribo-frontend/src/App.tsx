@@ -3,6 +3,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from "./auth/AuthProvider.tsx";
+import { Toaster } from "@/components/ui/toaster";
 import './index.css';
 
 // Import the generated route tree
@@ -28,6 +29,7 @@ const App = () => {
           <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
             <AuthProvider>
               <RouterProvider router={router} />
+              <Toaster />
             </AuthProvider>
           </GoogleOAuthProvider>
         </QueryClientProvider>

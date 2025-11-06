@@ -3,18 +3,22 @@ import { useState } from "react";
 import { Editor } from "@/components/Editor";
 import { AgentPanel } from "@/components/AgentPanel";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, PanelRightClose, PanelRightOpen, Save } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, PanelRightClose, PanelRightOpen, Save, Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import getDocumentById from "@/api/getDocumentById";
 import getSectionById from "@/api/getSectionById";
 import saveSection from "@/api/saveSection";
 import { AgentMessagingProvider } from "@/contexts/AgentMessagingContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Section = () => {
   const { documentId, sectionId } = Route.useParams();
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [content, setContent] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { isLoading: isDocumentLoading, data: document } = useQuery({
     queryKey: ["document-info", documentId],
@@ -31,6 +35,7 @@ const Section = () => {
   });
 
   const handleSave = async () => {
+    setIsSaving(true);
     const updatedSection = {
       ...section.section,
       content: content,
@@ -40,9 +45,25 @@ const Section = () => {
 
     try {
       await saveSection(updatedSection);
-      console.log("Section saved successfully");
+
+      // Invalidate queries to refresh cached data
+      queryClient.invalidateQueries({ queryKey: ["section-info", sectionId] });
+      queryClient.invalidateQueries({ queryKey: ["sections-list", documentId] });
+
+      toast({
+        title: "Success",
+        description: "Section saved successfully",
+        variant: "default",
+      });
     } catch (error) {
       console.error("Failed to save section:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save section. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -77,6 +98,7 @@ const Section = () => {
                     navigate({ to: `/documents/${document.document.id}` })
                   }
                   className="gap-2 cursor-pointer hover:bg-orange-500"
+                  disabled={isSaving}
                 >
                   <ArrowLeft className="h-4 w-4 cursor-pointer hover:bg-orange-500" />
                   Back to Document
@@ -94,9 +116,19 @@ const Section = () => {
                 <Button
                   onClick={handleSave}
                   className="gap-2 bg-orange-500 cursor-pointer"
+                  disabled={isSaving}
                 >
-                  <Save className="h-4 w-4" />
-                  Save
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save
+                    </>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
