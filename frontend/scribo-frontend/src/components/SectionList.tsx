@@ -10,9 +10,11 @@ import { useNavigate } from "@tanstack/react-router";
 import type { Section } from "@/data/mockData";
 import { ChevronRight, Edit3, Trash2, Plus } from "lucide-react";
 import deleteSection from "@/api/deleteSection";
+import createSection from "@/api/createSection";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { CreateSectionForm } from "@/components/CreateSectionForm";
 
 interface SectionListProps {
   sections: Section[];
@@ -24,6 +26,7 @@ export const SectionList = ({ sections, documentId }: SectionListProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const handleSectionClick = (sectionId: string) => {
     navigate({ to: `sections/${sectionId}` });
@@ -59,15 +62,55 @@ export const SectionList = ({ sections, documentId }: SectionListProps) => {
   };
 
   const handleAddSection = () => {
-    console.log("clicked");
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCreateSection = async (data: {
+    title: string;
+    content?: string;
+  }) => {
+    const newSection = {
+      document_id: documentId,
+      title: data.title,
+      content: data.content || "",
+      summary: "",
+      metadata: {},
+      length: data.content?.length || 0,
+      num_words: data.content?.split(/\s+/).length || 0,
+    };
+
+    try {
+      const response = await createSection(newSection);
+      const sectionId = response.section.id;
+
+      toast({
+        title: "Success",
+        description: "Section created successfully",
+        variant: "default",
+      });
+
+      // Invalidate the sections list query to trigger a refetch
+      queryClient.invalidateQueries({ queryKey: ["sections-list", documentId] });
+
+      // Navigate to the new section
+      navigate({ to: `sections/${sectionId}` });
+    } catch (error) {
+      console.error("Failed to create section:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create section. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-semibold tracking-tight">Sections</h2>
-        <p className="text-gray-300 mt-1">Click any section to start editing</p>
-      </div>
+    <>
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Sections</h2>
+          <p className="text-gray-300 mt-1">Click any section to start editing</p>
+        </div>
 
       <div className="space-y-3 ">
         {sections.map((section) => (
@@ -124,5 +167,11 @@ export const SectionList = ({ sections, documentId }: SectionListProps) => {
         </Card>
       </div>
     </div>
+    <CreateSectionForm
+      open={isCreateDialogOpen}
+      onOpenChange={setIsCreateDialogOpen}
+      onSubmit={handleCreateSection}
+    />
+    </>
   );
 };
