@@ -1,6 +1,6 @@
 # ✒️ Scribo – The AI-Powered Writing Studio
 
-> Craft stories, chapters, and notes with intelligent assistance. Built with Go, Python, LangChain, and Weaviate.
+> Craft stories, chapters, and notes with intelligent assistance. Built with Go, Python, LangChain, and Upstash.
 
 **Scribo** is a full-stack AI writing platform that empowers authors and creatives to write smarter and faster. With rich editing tools, AI agents, and scalable backend infrastructure, Scribo brings the power of language models directly into your creative workflow.
 
