@@ -27,8 +27,17 @@
 - 🔐 **Google OAuth Authentication**  
   Simple and secure sign-in for users.
 
----
-
 Whether you’re outlining a novel, organizing research, or editing scenes, Scribo brings thoughtful AI tools into every step of your creative process.
 
 ---
+
+### Agentic RAG Design
+<img width="1988" height="662" alt="image" src="https://github.com/user-attachments/assets/b0d8a801-597a-4b50-86d1-972097a03868" />
+
+---
+
+### Document Dashboard
+<img width="1058" height="601" alt="Screenshot 2025-11-16 172733" src="https://github.com/user-attachments/assets/d02e8a49-f145-4210-ad8b-b71854517ff3" />
+
+### Editing View
+<img width="1020" height="730" alt="Screenshot 2025-11-16 172812" src="https://github.com/user-attachments/assets/c262c9be-af2d-41ac-8b8e-4cc2f2b8759e" />
